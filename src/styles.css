@@ -3,3 +3,17 @@
 .account-button{border:1px solid #dfe6d9;background:#fff;color:#25352b;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:700;cursor:pointer}.modal-backdrop{position:fixed;inset:0;background:#101b16a8;z-index:30;display:grid;place-items:center;padding:18px}.account-modal{position:relative;background:#fff;border-radius:12px;width:min(100%,440px);padding:30px;box-shadow:0 25px 80px #0003;max-height:90vh;overflow:auto}.account-modal h2{font:800 27px Manrope,sans-serif;margin:10px 0}.account-modal>p{font-size:12px;color:#77847a;line-height:1.6;margin:0 0 20px}.account-modal form{display:grid;gap:11px}.account-modal input,.account-modal textarea{width:100%;border:1px solid #e2e8df;border-radius:6px;padding:12px;font-size:12px;outline-color:#9cbd68}.account-modal textarea{min-height:80px;resize:vertical}.modal-close{position:absolute;right:15px;top:15px;border:0;background:transparent;cursor:pointer;color:#526055}.modal-switch{margin-top:18px;border:0;background:transparent;color:#557d30;font-weight:700;font-size:11px;cursor:pointer}.supplier-modal{width:min(100%,520px)}.light-button{border:0;cursor:pointer;font:inherit}
 
 .dashboard-modal{width:min(100%,620px)}.dashboard-modal h3{font:700 14px Manrope;margin:22px 0 12px}.status-panel{background:#f4f7ef;border:1px solid #e4ebda;border-radius:8px;padding:14px;display:grid;gap:8px}.status-panel small{font-size:11px;color:#6f7c70}.status-pill{font-size:9px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;padding:5px 8px;border-radius:30px;background:#edf0e9;color:#667268;justify-self:start}.status-pill.approved,.status-pill.active{background:#e8f4dd;color:#4c762c}.status-pill.pending{background:#fff3d9;color:#946b18}.status-pill.rejected,.status-pill.suspended{background:#fde8e5;color:#a33d32}.dashboard-product{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #edf0eb;padding:11px 0}.dashboard-product b,.dashboard-product small{display:block}.dashboard-product b{font-size:11px}.dashboard-product small{font-size:10px;color:#89938a;margin-top:4px}
+
+
+/* Administrator workspace actions and empty states */
+.admin-toolbar{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 22px}
+.admin-action{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid #dfe6da;background:#fff;color:#344338;border-radius:6px;padding:9px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.admin-action:hover{border-color:#91a86f;background:#f7faF3}
+.admin-action.primary{background:#17251d;color:#fff;border-color:#17251d}
+.admin-action.primary:hover{background:#2b4131}
+.admin-empty{border:1px dashed #dce5d7;background:#f8faf6;border-radius:7px;padding:16px;margin:10px 0 22px;color:#536257}
+.admin-empty b{font:700 12px Manrope;color:#27372b}
+.admin-empty p{font-size:11px;line-height:1.6;color:#7b887e;margin:6px 0 12px}
+.dashboard-modal h3[id]{scroll-margin-top:16px}
+.dashboard-product .text-link{border:1px solid #e2e8de;border-radius:5px;padding:6px 9px;margin:5px 0 0 6px;background:#fff;cursor:pointer}
+.dashboard-product .text-link:hover{background:#f2f6ec}
