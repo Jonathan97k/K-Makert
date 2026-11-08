@@ -1,0 +1,17 @@
+{
+  "name": "Kelnix Marketplace",
+  "short_name": "Kelnix",
+  "description": "Shop from multiple suppliers in one marketplace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f5",
+  "theme_color": "#101b16",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
