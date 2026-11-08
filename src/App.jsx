@@ -144,9 +144,15 @@ export default function App() {
     if (!user) { setSupplierOpen(false); setAuthMode('signin'); setAccountOpen(true); setNotice('Please sign in or create an account before applying as a supplier.'); return }
     setAuthBusy(true)
     try {
-      const {error} = await supabase.from('suppliers').insert({...supplierForm,owner_id:user.id,status:'pending'})
-      if (error) throw error
-      setSupplierOpen(false); setNotice('Supplier application submitted. Kelnix will review it before approval.')
+      const {data,error} = await supabase.from('suppliers').insert({...supplierForm,owner_id:user.id,status:'pending'}).select().single()
+      if (error) {
+        if (error.code === '23505') throw new Error('This account already has a supplier application. Open your dashboard to check its status.')
+        throw error
+      }
+      setSupplierAccount(data)
+      setMyProducts([])
+      setSupplierOpen(false)
+      setNotice('Supplier application submitted successfully. Your status is pending admin review. Open your dashboard to track it.')
     } catch(error) { setNotice(error.message || 'Supplier application could not be submitted.') }
     finally { setAuthBusy(false) }
   }
