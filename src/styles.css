@@ -17,3 +17,16 @@
 .dashboard-modal h3[id]{scroll-margin-top:16px}
 .dashboard-product .text-link{border:1px solid #e2e8de;border-radius:5px;padding:6px 9px;margin:5px 0 0 6px;background:#fff;cursor:pointer}
 .dashboard-product .text-link:hover{background:#f2f6ec}
+
+
+.admin-overview{background:#f8faf6;border:1px solid #e4eadf;border-radius:10px;padding:16px;margin:18px 0}
+.admin-overview-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.admin-overview-head h3{margin:5px 0 0!important;font-size:19px!important}
+.admin-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:15px}
+.admin-kpis>div{background:#fff;border:1px solid #e8ede4;border-radius:7px;padding:12px;min-width:0}
+.admin-kpis small,.admin-kpis b,.admin-kpis em{display:block}
+.admin-kpis small{font-size:10px;color:#7b887e}
+.admin-kpis b{font:800 17px Manrope,sans-serif;color:#25352b;margin:5px 0;overflow-wrap:anywhere}
+.admin-kpis em{font-style:normal;font-size:9px;color:#879287}
+.dashboard-modal select{border:1px solid #e2e8de;border-radius:5px;padding:6px;font-size:10px;background:#fff;color:#344338;max-width:120px}
+@media(max-width:560px){.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-overview{padding:12px}.admin-kpis b{font-size:15px}}
