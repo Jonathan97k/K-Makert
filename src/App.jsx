@@ -100,8 +100,37 @@ export default function App() {
     if(error){setIsAdmin(false);setNotice('Could not verify your account role: '+error.message);return}
     const admin=data?.role==='admin' || activeUser.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1'
     setIsAdmin(admin)
-    if(admin) await loadAdminData()
-    else setNotice('Signed in as '+(activeUser.email||'unknown account')+'. This account does not have administrator access.')
+    if(admin) {
+      await loadAdminData()
+    } else {
+      // Non-admin accounts belong in the supplier workspace, never in the admin error state.
+      const {data:supplier,error:supplierError}=await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('owner_id',activeUser.id)
+        .maybeSingle()
+      if(supplierError) {
+        setSupplierAccount(null)
+        setNotice('We could not load your supplier workspace. Please try again.')
+        return
+      }
+      setSupplierAccount(supplier || null)
+      if(supplier?.id) {
+        const {data:rows,error:productsError}=await supabase
+          .from('products')
+          .select('*')
+          .eq('supplier_id',supplier.id)
+          .order('created_at',{ascending:false})
+        if(productsError) {
+          setMyProducts([])
+          setNotice('Your supplier workspace opened, but products could not be loaded.')
+        } else {
+          setMyProducts(rows || [])
+        }
+      } else {
+        setMyProducts([])
+      }
+    }
   }
 
   const updateAdminRecord = async (table,id,values) => {
