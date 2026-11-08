@@ -82,6 +82,16 @@ export default function App() {
     catch { setNotice('Supplier application link: ' + link); }
   }
 
+  const openDashboard = async () => {
+    setDashboardOpen(true)
+    if (!user || !isSupabaseConfigured) return
+    const {data,error} = await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle()
+    if (error) { setNotice('Could not verify administrator access: ' + error.message); return }
+    const admin = data?.role === 'admin'
+    setIsAdmin(admin)
+    if (admin) await loadAdminData()
+  }
+
   const updateAdminRecord = async (table,id,values) => {
     const {error}=await supabase.from(table).update(values).eq('id',id)
     if(error){setNotice(error.message);return}
@@ -153,7 +163,7 @@ export default function App() {
       <a className="brand" href="#"><span className="brand-mark">K</span><span>KELNIX<span className="brand-light">MARKETPLACE</span></span></a>
       <div className="searchbar"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search products, categories and more..."/><kbd>⌘ K</kbd></div>
       <nav className={mobileMenu ? 'nav nav-open' : 'nav'}><a href="#shop" onClick={()=>setMobileMenu(false)}>Shop</a><a href="#how" onClick={()=>setMobileMenu(false)}>How it works</a><a href="#suppliers" onClick={()=>setMobileMenu(false)}>Sell with us</a></nav>
-      <div className="header-actions">{user&&<button className="account-button" onClick={()=>{setDashboardOpen(true);if(isAdmin)loadAdminData()}}>Dashboard</button>}<button className="account-button" onClick={()=>user ? supabase.auth.signOut() : (setAuthMode('signin'),setAccountOpen(true))}>{user ? 'Sign out' : 'Sign in'}</button><button className="icon-button" aria-label="Saved items" onClick={()=>setNotice('Saved items: '+saved.length)}><Heart size={19}/></button><button className="cart-button" onClick={()=>setCartOpen(true)}><ShoppingBag size={18}/><span>Cart</span><b>{count}</b></button><button className="mobile-toggle" onClick={()=>setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu?<X/>:<Menu/>}</button></div>
+      <div className="header-actions">{user&&<button className="account-button" onClick={openDashboard}>Dashboard</button>}<button className="account-button" onClick={()=>user ? supabase.auth.signOut() : (setAuthMode('signin'),setAccountOpen(true))}>{user ? 'Sign out' : 'Sign in'}</button><button className="icon-button" aria-label="Saved items" onClick={()=>setNotice('Saved items: '+saved.length)}><Heart size={19}/></button><button className="cart-button" onClick={()=>setCartOpen(true)}><ShoppingBag size={18}/><span>Cart</span><b>{count}</b></button><button className="mobile-toggle" onClick={()=>setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu?<X/>:<Menu/>}</button></div>
     </header>
     <main>
       <section className="hero">
