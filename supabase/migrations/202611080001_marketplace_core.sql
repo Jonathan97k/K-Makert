@@ -230,3 +230,48 @@ using (public.is_marketplace_admin()) with check (public.is_marketplace_admin())
 -- creating that user's account:
 -- update public.profiles set role = 'admin' where id = '<auth-user-uuid>';
 -- Supplier status/role approval must be performed by an administrator.
+
+
+-- Guard fields that suppliers/customers must never self-approve or escalate.
+create or replace function public.guard_marketplace_privileged_fields()
+returns trigger language plpgsql security definer
+set search_path = public
+as $$
+begin
+  if tg_table_name = 'profiles' then
+    if not public.is_marketplace_admin() and new.role is distinct from old.role then
+      raise exception 'Only an administrator can change account roles';
+    end if;
+  elsif tg_table_name = 'suppliers' then
+    if not public.is_marketplace_admin() then
+      if new.owner_id is distinct from old.owner_id
+        or new.status is distinct from old.status
+        or new.commission_rate is distinct from old.commission_rate then
+        raise exception 'Only an administrator can change supplier ownership, approval or commission';
+      end if;
+    end if;
+  elsif tg_table_name = 'products' then
+    if not public.is_marketplace_admin() then
+      if new.supplier_id is distinct from old.supplier_id then
+        raise exception 'A product cannot be transferred to another supplier';
+      end if;
+      if new.status not in ('draft','pending') then
+        raise exception 'Supplier product changes must be submitted for review';
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists guard_profile_privileged_fields on public.profiles;
+create trigger guard_profile_privileged_fields before update on public.profiles
+for each row execute function public.guard_marketplace_privileged_fields();
+
+drop trigger if exists guard_supplier_privileged_fields on public.suppliers;
+create trigger guard_supplier_privileged_fields before update on public.suppliers
+for each row execute function public.guard_marketplace_privileged_fields();
+
+drop trigger if exists guard_product_privileged_fields on public.products;
+create trigger guard_product_privileged_fields before update on public.products
+for each row execute function public.guard_marketplace_privileged_fields();
