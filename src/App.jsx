@@ -135,13 +135,13 @@ export default function App() {
       if (authMode === 'signup' && !result.data.session) setNotice('Account created. Check your email to confirm your address, then sign in.')
       else setNotice(authMode === 'signup' ? 'Account created successfully.' : 'Welcome back.')
       setAccountOpen(false)
-    } catch(error) { setNotice(error.message || 'Unable to complete sign in.') }
+    } catch(error) { const message=(error.message||'').toLowerCase().includes('invalid login credentials') ? 'These details do not match an existing account. If this is your first time, choose Create account below and register first.' : (error.message || 'Unable to complete sign in.'); setNotice(message) }
     finally { setAuthBusy(false) }
   }
 
   const submitSupplier = async (event) => {
     event.preventDefault()
-    if (!user) { setSupplierOpen(false); setAuthMode('signin'); setAccountOpen(true); setNotice('Please sign in or create an account before applying as a supplier.'); return }
+    if (!user) { setSupplierOpen(false); setAuthMode('signup'); setAccountOpen(true); setNotice('Create your Kelnix account first. After confirming your email, sign in and submit your supplier application.'); return }
     setAuthBusy(true)
     try {
       const {data,error} = await supabase.from('suppliers').insert({...supplierForm,owner_id:user.id,status:'pending'}).select().single()
