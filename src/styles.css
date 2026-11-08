@@ -30,3 +30,24 @@
 .admin-kpis em{font-style:normal;font-size:9px;color:#879287}
 .dashboard-modal select{border:1px solid #e2e8de;border-radius:5px;padding:6px;font-size:10px;background:#fff;color:#344338;max-width:120px}
 @media(max-width:560px){.admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-overview{padding:12px}.admin-kpis b{font-size:15px}}
+
+
+/* Polished Kelnix authentication and seller onboarding */
+.auth-brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;color:#17251d;font:800 14px Manrope,sans-serif;letter-spacing:.08em}
+.auth-brand img{width:43px;height:43px;border-radius:11px}
+.auth-brand small{display:block;font:700 8px 'DM Sans',sans-serif;letter-spacing:.2em;color:#89958a;margin-top:3px}
+.account-modal .eyebrow{margin-bottom:8px}
+.account-modal h2{letter-spacing:-.04em}
+.account-modal form label{display:grid;gap:7px;font-size:10px;font-weight:700;color:#455448}
+.account-modal form label small{display:inline;font-size:9px;font-weight:500;color:#8b968d}
+.account-modal input,.account-modal textarea{font-size:12px;background:#fff}
+.google-auth-button{width:100%;height:46px;display:flex;align-items:center;justify-content:center;gap:11px;border:1px solid #dfe5dc;border-radius:7px;background:#fff;color:#25342a;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s,border-color .2s}
+.google-auth-button:hover{background:#f8faf6;border-color:#bdcbb3}
+.google-auth-button:disabled{opacity:.55;cursor:not-allowed}
+.google-g{font:800 19px Arial,sans-serif;color:#4285f4}
+.auth-divider{display:flex;align-items:center;gap:12px;color:#9aa39b;font-size:9px;margin:17px 0}
+.auth-divider:before,.auth-divider:after{content:"";height:1px;background:#edf0eb;flex:1}
+.auth-security{display:flex;align-items:center;gap:7px;color:#778579;font-size:10px;margin:15px 0 4px}
+.auth-security svg{color:#6c963f;flex:none}
+.form-section-label{padding-top:10px;margin-top:4px;border-top:1px solid #edf0eb;color:#778b68;font-size:9px;font-weight:800;letter-spacing:.15em}
+@media(max-width:560px){.account-modal{padding:25px 20px}.auth-brand{margin-bottom:18px}.google-auth-button{height:44px}}
