@@ -34,6 +34,10 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false)
   const [authForm, setAuthForm] = useState({email:'',password:'',full_name:'',phone:''})
   const [supplierForm, setSupplierForm] = useState({business_name:'',contact_name:'',phone:'',email:'',district:'',address:'',description:''})
+  const [supplierAccount, setSupplierAccount] = useState(null)
+  const [dashboardOpen, setDashboardOpen] = useState(false)
+  const [myProducts, setMyProducts] = useState([])
+  const [productForm, setProductForm] = useState({name:'',category:'Groceries',description:'',unit:'piece',cost_price:'',selling_price:'',stock_quantity:'',image_url:''})
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -46,6 +50,31 @@ export default function App() {
     })
     return () => { alive=false; subscription.unsubscribe() }
   }, [])
+
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured) { setSupplierAccount(null); setMyProducts([]); return }
+    let alive = true
+    supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle().then(({data}) => {
+      if (!alive) return
+      setSupplierAccount(data || null)
+      if (data?.id) supabase.from('products').select('*').eq('supplier_id',data.id).order('created_at',{ascending:false}).then(({data:rows})=>{if(alive)setMyProducts(rows||[])})
+    })
+    return () => { alive=false }
+  }, [user])
+
+  const submitProduct = async (event) => {
+    event.preventDefault()
+    if (!supplierAccount || supplierAccount.status !== 'approved') return
+    setAuthBusy(true)
+    try {
+      const payload = {...productForm,supplier_id:supplierAccount.id,cost_price:Number(productForm.cost_price||0),selling_price:Number(productForm.selling_price),stock_quantity:Number(productForm.stock_quantity||0),status:'pending'}
+      const {data,error} = await supabase.from('products').insert(payload).select().single()
+      if (error) throw error
+      setMyProducts(rows=>[data,...rows]); setProductForm({name:'',category:'Groceries',description:'',unit:'piece',cost_price:'',selling_price:'',stock_quantity:'',image_url:''})
+      setNotice('Product submitted for admin review. It will appear in the public catalogue after approval.')
+    } catch(error) { setNotice(error.message || 'Could not submit product.') }
+    finally { setAuthBusy(false) }
+  }
 
   const submitAuth = async (event) => {
     event.preventDefault(); setAuthBusy(true)
@@ -97,7 +126,7 @@ export default function App() {
       <a className="brand" href="#"><span className="brand-mark">K</span><span>KELNIX<span className="brand-light">MARKETPLACE</span></span></a>
       <div className="searchbar"><Search size={18}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search products, categories and more..."/><kbd>⌘ K</kbd></div>
       <nav className={mobileMenu ? 'nav nav-open' : 'nav'}><a href="#shop" onClick={()=>setMobileMenu(false)}>Shop</a><a href="#how" onClick={()=>setMobileMenu(false)}>How it works</a><a href="#suppliers" onClick={()=>setMobileMenu(false)}>Sell with us</a></nav>
-      <div className="header-actions"><button className="account-button" onClick={()=>user ? supabase.auth.signOut() : (setAuthMode('signin'),setAccountOpen(true))}>{user ? 'Sign out' : 'Sign in'}</button><button className="icon-button" aria-label="Saved items" onClick={()=>setNotice('Saved items: '+saved.length)}><Heart size={19}/></button><button className="cart-button" onClick={()=>setCartOpen(true)}><ShoppingBag size={18}/><span>Cart</span><b>{count}</b></button><button className="mobile-toggle" onClick={()=>setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu?<X/>:<Menu/>}</button></div>
+      <div className="header-actions">{user&&<button className="account-button" onClick={()=>setDashboardOpen(true)}>Dashboard</button>}<button className="account-button" onClick={()=>user ? supabase.auth.signOut() : (setAuthMode('signin'),setAccountOpen(true))}>{user ? 'Sign out' : 'Sign in'}</button><button className="icon-button" aria-label="Saved items" onClick={()=>setNotice('Saved items: '+saved.length)}><Heart size={19}/></button><button className="cart-button" onClick={()=>setCartOpen(true)}><ShoppingBag size={18}/><span>Cart</span><b>{count}</b></button><button className="mobile-toggle" onClick={()=>setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu?<X/>:<Menu/>}</button></div>
     </header>
     <main>
       <section className="hero">
