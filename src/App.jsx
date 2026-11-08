@@ -66,11 +66,12 @@ export default function App() {
     supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle().then(async ({data,error}) => {
       if (!alive) return
       let account = data || null
-      const pendingApplication = user.user_metadata?.supplier_application
+      const pendingApplication = user.user_metadata?.supplier_application || (() => { try { return JSON.parse(sessionStorage.getItem('kelnix_supplier_application') || 'null') } catch { return null } })()
       if (!account && !error && pendingApplication?.business_name && pendingApplication?.contact_name && pendingApplication?.phone) {
         const {data:created,error:createError} = await supabase.from('suppliers').insert({...pendingApplication,owner_id:user.id,status:'pending'}).select().single()
         if (!createError) {
           account = created
+          sessionStorage.removeItem('kelnix_supplier_application')
           setNotice('Your email is confirmed and your supplier application has been submitted. We will review your business details shortly.')
         } else if (createError.code === '23505') {
           const {data:existing} = await supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle()
@@ -175,7 +176,7 @@ export default function App() {
     setAuthBusy(true)
     try {
       const options = { redirectTo: window.location.origin }
-      if (forSupplier) options.data = { supplier_application: { ...supplierForm, email: supplierForm.email || '' } }
+      if (forSupplier) sessionStorage.setItem('kelnix_supplier_application', JSON.stringify({ ...supplierForm, email: supplierForm.email || '' }))
       const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options })
       if (error) throw error
     } catch (error) {
