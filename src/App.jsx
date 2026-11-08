@@ -197,6 +197,9 @@ export default function App() {
           options:{data:{full_name:supplierAuthForm.full_name.trim(),phone:supplierForm.phone,supplier_application:application}}
         })
         if (error) throw error
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          throw new Error('This email already has a Kelnix account. Sign in first, then complete your supplier profile.')
+        }
         setSupplierOpen(false)
         if (data.session) {
           setUser(data.session.user)
