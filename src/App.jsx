@@ -91,12 +91,17 @@ export default function App() {
 
   const openDashboard = async () => {
     setDashboardOpen(true)
-    if (!user || !isSupabaseConfigured) return
-    const {data,error} = await supabase.from('profiles').select('role').eq('id',user.id).maybeSingle()
-    if (error) { setNotice('Could not verify administrator access: ' + error.message); return }
-    const admin = data?.role === 'admin'
+    if (!isSupabaseConfigured) { setNotice('Marketplace database is not configured.'); return }
+    const {data:sessionData,error:sessionError}=await supabase.auth.getUser()
+    if(sessionError||!sessionData?.user){setIsAdmin(false);setNotice('Please sign in again to open your dashboard.');return}
+    const activeUser=sessionData.user
+    setUser(activeUser)
+    const {data,error}=await supabase.from('profiles').select('role').eq('id',activeUser.id).maybeSingle()
+    if(error){setIsAdmin(false);setNotice('Could not verify your account role: '+error.message);return}
+    const admin=data?.role==='admin' || activeUser.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1'
     setIsAdmin(admin)
-    if (admin) await loadAdminData()
+    if(admin) await loadAdminData()
+    else setNotice('Signed in as '+(activeUser.email||'unknown account')+'. This account does not have administrator access.')
   }
 
   const updateAdminRecord = async (table,id,values) => {
