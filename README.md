@@ -1,21 +1,48 @@
 # Kelnix Marketplace
 
-A mobile-first, installable multi-supplier marketplace PWA for Malawi.
+A mobile-first multi-supplier marketplace for Malawi.
 
-## Current milestone
+## Current storefront
 
 - Responsive storefront with search, category filters and sorting
 - Product cards show supplier attribution, unit and MWK price
 - Cart with quantity controls and order summary
-- WhatsApp checkout flow (activated after configuring the business number)
-- Supplier recruitment CTA
-- PWA manifest, installable app icon and app-shell service worker
+- WhatsApp checkout contact: +265 882 986 170
+- Supplier recruitment call-to-action
+- PWA entrypoint is wired for a manifest and service worker; verify the public PWA assets before describing the app as fully installable
 
-## Important: preview catalogue
+## Catalogue warning
 
-The products currently in src/App.jsx are **sample listings for interface testing only**. They are not verified supplier inventory, stock or live prices. Replace them with approved supplier listings before taking customer orders.
+The products currently in `src/App.jsx` are **sample listings for interface testing only**. They are not verified supplier inventory, stock or live prices. Replace them with approved supplier listings before taking customer orders.
 
-## Run locally
+## Marketplace backend foundation (new)
+
+The first database migration is at:
+
+`supabase/migrations/202611080001_marketplace_core.sql`
+
+It creates the core data model for:
+
+- Customer and role profiles
+- Supplier applications, approval status and commission rate
+- Products, supplier ownership, stock and moderation status
+- Orders and supplier-specific order items
+- Payment records (provider-neutral; no payment gateway is activated)
+- Profit ledger for gross sales, supplier cost, platform fee and net profit
+- Row-level security policies and guards against supplier self-approval or role escalation
+
+### Apply the database migration
+
+1. Provision or select the Supabase project connected to the Kelnix Marketplace Vercel project.
+2. Open the Supabase SQL Editor.
+3. Run the complete migration file above.
+4. Create the first administrator account, then set its profile role from the SQL Editor:
+   `update public.profiles set role = 'admin' where id = '<auth-user-uuid>';`
+5. Add the Supabase project URL and publishable/anon key to the Vercel project environment. Never put a service-role key in browser code.
+
+The migration is committed but is **not yet applied to a live database**. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
+
+## Local development
 
     npm install
     npm run dev
@@ -26,14 +53,22 @@ The products currently in src/App.jsx are **sample listings for interface testin
 
 ## Configuration
 
-Set VITE_WHATSAPP_NUMBER to the Kelnix order WhatsApp number in the project settings in international format, digits only (for Malawi, start with 265; omit the leading +). Until configured, checkout displays a setup notice and does not send an order.
+- `VITE_WHATSAPP_NUMBER`: Kelnix order WhatsApp number in international digits-only format (265882986170).
+- `VITE_CONTACT_EMAIL`: Kelnix contact email (info.kelnix@gmail.com).
+- Supabase public URL and publishable/anon key: add after connecting the database resource. Never expose the service-role key.
 
-## Next product milestones
+## Delivery roadmap
 
-1. Supplier records, unique supplier IDs and supplier onboarding.
-2. Secure admin dashboard to create suppliers and publish verified products.
-3. Persistent product, stock, order and customer database.
-4. Order routing by supplier, delivery coordination and payment status.
-5. Supplier cost, selling price, margin and sales analytics.
+| Module | State |
+| --- | --- |
+| Customer marketplace | Storefront UI in place; sample catalogue only |
+| PWA foundation | Entrypoint wired; verify manifest/service worker assets |
+| Supplier registration | Database schema prepared; live flow pending |
+| Supplier dashboard | Pending |
+| Product management | Database schema prepared; live UI/API pending |
+| Admin dashboard | Database schema prepared; live UI/API pending |
+| Order management | Database schema prepared; transactional order flow pending |
+| Profit tracking | Ledger schema prepared; calculation and reporting pending |
+| Payment integration | Provider selection and credentials required |
 
-The current storefront is a first UI milestone, not yet a complete multi-user commerce backend. Do not publish sample prices as live offers.
+The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
