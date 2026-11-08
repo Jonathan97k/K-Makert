@@ -275,3 +275,28 @@ for each row execute function public.guard_marketplace_privileged_fields();
 drop trigger if exists guard_product_privileged_fields on public.products;
 create trigger guard_product_privileged_fields before update on public.products
 for each row execute function public.guard_marketplace_privileged_fields();
+
+
+-- Create a customer profile automatically after Supabase Auth signup.
+-- Account role is always customer at signup; supplier/admin privileges are granted separately.
+create or replace function public.handle_new_marketplace_user()
+returns trigger language plpgsql security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, phone, role)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    new.raw_user_meta_data ->> 'phone',
+    'customer'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created_marketplace on auth.users;
+create trigger on_auth_user_created_marketplace
+after insert on auth.users
+for each row execute function public.handle_new_marketplace_user();
