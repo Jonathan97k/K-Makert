@@ -1,74 +1,90 @@
-# Kelnix Marketplace
+# Kelnix Dropshipping
 
-A mobile-first multi-supplier marketplace for Malawi.
+Kelnix is evolving from a Malawi multi-supplier marketplace into a dropshipping commerce platform. The current implementation reuses the React/Vite storefront and existing Supabase project.
 
-## Current storefront
+## Current deployment status
 
-- Responsive storefront with search, category filters and sorting
-- Product cards show supplier attribution, unit and MWK price
-- Cart with quantity controls and order summary
-- WhatsApp checkout contact: +265 882 986 170
-- Supplier recruitment call-to-action
-- PWA entrypoint is wired for a manifest and service worker; verify the public PWA assets before describing the app as fully installable
+- Existing Supabase project upgraded on 13 November 2026.
+- Original marketplace data tables were retained and extended; no customer/order/product records were present. Three profile records were retained to preserve existing sign-in identities.
+- Database migrations applied: original marketplace migrations plus international commerce foundation, secure order engine, PayChangu/JARVIS outbox, and security/query-index hardening.
+- Four Supabase Edge Functions are deployed and ACTIVE:
+  - `initiate-paychangu-payment` (JWT required)
+  - `verify-paychangu-payment` (JWT required)
+  - `paychangu-webhook` (provider HMAC validation; JWT disabled)
+  - `jarvis-outbox` (shared-secret authentication; JWT disabled)
+- No PayChangu or JARVIS secrets have been configured yet.
+- No PayChangu dashboard webhook has been registered and no payment test has been run.
+- JARVIS has not yet been connected as an event consumer.
+- Malawi/MWK is the only enabled market. International destinations are not enabled.
+- `main` remains unchanged. Work is on `feat/international-dropshipping-foundation`.
 
-## Catalogue warning
+## Commerce and payment flow
 
-The products currently in `src/App.jsx` are **sample listings for interface testing only**. They are not verified supplier inventory, stock or live prices. Replace them with approved supplier listings before taking customer orders.
+1. A signed-in customer chooses products and an approved shipping service for each supplier.
+2. The database RPC `place_marketplace_order` validates stock, supplier status, destination and shipping options, calculates totals, and writes order/fulfilment snapshots atomically.
+3. The customer is redirected to PayChangu Standard Checkout by a server-side Edge Function.
+4. The return flow and webhook independently verify the transaction with PayChangu. Payment is only marked successful after server-side verification of reference, status, amount and currency.
+5. A verified payment creates an idempotent JARVIS outbox event. Supplier purchasing remains subject to human approval.
 
-## Marketplace backend foundation (new)
+The storefront must not be used for live orders until secrets, frontend environment variables, shipping options, PayChangu webhook configuration and end-to-end tests are complete.
 
-The first database migration is at:
+## Supabase migrations
 
-`supabase/migrations/202611080001_marketplace_core.sql`
+- `supabase/migrations/202611080001_marketplace_core.sql` — original marketplace schema.
+- `supabase/migrations/202611130001_international_commerce_foundation.sql` — market, supplier, shipping and order snapshots.
+- `supabase/migrations/202611130002_secure_order_engine.sql` — trusted transactional order-placement RPC.
+- `supabase/migrations/202611130003_paychangu_payment_and_jarvis_outbox.sql` — payment state, verified finalisation and JARVIS outbox.
+- `supabase/migrations/202611130004_security_and_query_indexes.sql` — trigger-function permissions and supporting indexes.
 
-It creates the core data model for:
+## Required configuration before payment testing
 
-- Customer and role profiles
-- Supplier applications, approval status and commission rate
-- Products, supplier ownership, stock and moderation status
-- Orders and supplier-specific order items
-- Payment records (provider-neutral; no payment gateway is activated)
-- Profit ledger for gross sales, supplier cost, platform fee and net profit
-- Row-level security policies and guards against supplier self-approval or role escalation
+Set these as Supabase Edge Function secrets (never in frontend code):
 
-### Apply the database migration
+- `PAYCHANGU_SECRET_KEY`
+- `PAYCHANGU_WEBHOOK_SECRET`
+- `SITE_URL` — the deployed storefront origin
+- `JARVIS_WEBHOOK_SECRET` — a long random secret shared with the JARVIS worker
 
-1. Provision or select the Supabase project connected to the Kelnix Marketplace Vercel project.
-2. Open the Supabase SQL Editor.
-3. Run the complete migration file above.
-4. Create the first administrator account, then set its profile role from the SQL Editor:
-   `update public.profiles set role = 'admin' where id = '<auth-user-uuid>';`
-5. Add the Supabase project URL and publishable/anon key to the Vercel project environment. Never put a service-role key in browser code.
+Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions automatically. Do not expose the service-role key.
 
-The migration is committed but is **not yet applied to a live database**. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
+Set the frontend environment variables in the hosting project:
 
-## Local development
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-    npm install
-    npm run dev
+Use the publishable/anon key only in the browser. Never use the service-role key as a Vite variable.
 
-## Build
+Then configure the PayChangu merchant webhook URL:
 
-    npm run build
+`https://YOUR_PROJECT_REF.supabase.co/functions/v1/paychangu-webhook`
 
-## Configuration
+See [the PayChangu and JARVIS runbook](docs/PAYCHANGU_INTEGRATION_RUNBOOK.md) for setup and test cases.
 
-- `VITE_WHATSAPP_NUMBER`: Kelnix order WhatsApp number in international digits-only format (265882986170).
-- `VITE_CONTACT_EMAIL`: Kelnix contact email (info.kelnix@gmail.com).
-- Supabase public URL and publishable/anon key: add after connecting the database resource. Never expose the service-role key.
+## Security notes
 
-## Delivery roadmap
+- Payment state and order totals are server-authoritative.
+- Webhook signature verification is performed over the raw request body and the provider transaction is independently re-verified.
+- The JARVIS outbox and webhook event tables intentionally have no client-facing RLS policies; service-role-only backend functions access them.
+- Security-definer functions used for admin checks and transactional order placement are intentional; the order RPC validates the authenticated caller and inputs.
+- Enable leaked-password protection in Supabase Auth before launch.
+- Never automatically purchase from suppliers or send supplier payouts without explicit human approval.
 
-| Module | State |
-| --- | --- |
-| Customer marketplace | Storefront UI in place; sample catalogue only |
-| PWA foundation | Entrypoint wired; verify manifest/service worker assets |
-| Supplier registration | Database schema prepared; live flow pending |
-| Supplier dashboard | Pending |
-| Product management | Database schema prepared; live UI/API pending |
-| Admin dashboard | Database schema prepared; live UI/API pending |
-| Order management | Database schema prepared; transactional order flow pending |
-| Profit tracking | Ledger schema prepared; calculation and reporting pending |
-| Payment integration | Provider selection and credentials required |
+## Remaining work
 
-The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
+1. Add the four Supabase secrets securely and configure the PayChangu test webhook.
+2. Set the correct Supabase URL/publishable key and storefront URL in the frontend hosting environment.
+3. Configure an approved supplier, active product, and actual MWK shipping service.
+4. Run end-to-end tests: successful payment, failure, duplicate webhook, invalid signature, amount/currency mismatch, delayed webhook, and customer return.
+5. Connect the JARVIS worker to claim and acknowledge outbox events idempotently.
+6. Implement supplier stock confirmation/synchronisation, purchase orders, tracking, refunds and reconciliation.
+7. Select one international launch country only after confirming payment settlement, duties/taxes, consumer rights, returns and shipping feasibility.
+
+## Development
+
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+GitHub Actions validates the frontend production build and type-checks all four Edge Functions. SQL migrations still require database-level tests and the full payment flow requires a test transaction.
