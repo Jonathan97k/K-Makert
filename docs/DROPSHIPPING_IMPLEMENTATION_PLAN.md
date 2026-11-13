@@ -47,7 +47,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Added an additive international commerce migration covering supplier country/type, supplier SKU and cost currency, product destination eligibility, processing/shipping estimates, market configuration, supplier shipping proposals with admin approval, order currency/market/FX snapshots, and supplier commercial snapshots on order items. Markets remain disabled and no shipping option is approved by default.
 - Removed the hard-coded administrator UUID fallback from frontend role checks. Administrator access now depends on the authenticated user's database profile role.
 - Prevented the configured/live catalogue from silently showing demo listings when the database returns zero products or a query error. The demo catalogue remains available only in unconfigured preview mode.
-- No production database was changed. The new migrations and Edge Functions are committed but have not been deployed or executed against a test Supabase project. No PayChangu credentials or dashboard webhook have been configured, and no live charge has been initiated.
+- GitHub Actions frontend build and Edge Function type-checks passed. No production database was changed. The new migrations and Edge Functions are committed but have not been deployed or executed against a test Supabase project. No PayChangu credentials or dashboard webhook have been configured, and no live charge has been initiated.
 
 ## Important findings and risks to resolve
 
