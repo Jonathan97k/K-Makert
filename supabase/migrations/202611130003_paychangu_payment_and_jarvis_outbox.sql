@@ -216,7 +216,7 @@ returns setof public.jarvis_event_outbox
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if auth.role() <> 'service_role' then
     raise exception 'Service role required' using errcode = '42501';
@@ -244,7 +244,7 @@ begin
   where e.id = c.id
   returning e.*;
 end;
-$;
+$$;
 
 create or replace function public.ack_jarvis_event(
   p_event_id uuid,
@@ -255,7 +255,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 declare
   v_event public.jarvis_event_outbox%rowtype;
 begin
@@ -287,7 +287,7 @@ begin
   where id=p_event_id;
   return jsonb_build_object('ok',true,'status',case when v_event.attempts >= 8 then 'held_for_review' else 'failed' end);
 end;
-$;
+$$;
 
 revoke all on function public.claim_jarvis_events(integer) from public, anon, authenticated;
 grant execute on function public.claim_jarvis_events(integer) to service_role;
