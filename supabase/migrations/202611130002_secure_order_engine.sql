@@ -4,6 +4,44 @@
 
 begin;
 
+
+-- Checkout must be allowed to decrement stock on active products. Suppliers still
+-- cannot edit active product details or alter supplier ownership/approval state.
+create or replace function public.guard_marketplace_privileged_fields()
+returns trigger language plpgsql security definer
+set search_path = public
+as $
+begin
+  if tg_table_name = 'profiles' then
+    if not public.is_marketplace_admin() and new.role is distinct from old.role then
+      raise exception 'Only an administrator can change account roles';
+    end if;
+  elsif tg_table_name = 'suppliers' then
+    if not public.is_marketplace_admin() then
+      if new.owner_id is distinct from old.owner_id
+        or new.status is distinct from old.status
+        or new.commission_rate is distinct from old.commission_rate then
+        raise exception 'Only an administrator can change supplier ownership, approval or commission';
+      end if;
+    end if;
+  elsif tg_table_name = 'products' then
+    if not public.is_marketplace_admin() then
+      if new.supplier_id is distinct from old.supplier_id then
+        raise exception 'A product cannot be transferred to another supplier';
+      end if;
+      if new.status not in ('draft','pending') then
+        if (to_jsonb(new) - 'stock_quantity' - 'updated_at')
+          is distinct from (to_jsonb(old) - 'stock_quantity' - 'updated_at') then
+          raise exception 'Only inventory quantity can change on an active product';
+        end if;
+      end if;
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+
 -- Keep the existing Malawi market available; no foreign market is enabled.
 insert into public.market_configs(country_code, market_name, currency_code, is_enabled, is_default)
 values ('MW', 'Malawi', 'MWK', true, true)
