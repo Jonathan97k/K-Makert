@@ -31,11 +31,14 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 
 ## Work completed on this branch
 
+- Added a trusted transactional `place_marketplace_order` database function. It requires an authenticated customer, validates the destination market and basket, locks products, calculates product prices from the database, checks approved suppliers and destination eligibility, reserves stock, requires one approved shipping service per supplier, and writes order, line-item and supplier-fulfilment snapshots in one transaction.
+- Removed direct customer insert policies/privileges for orders and order items; the browser cannot set its own order totals, supplier IDs, prices or payment status through direct table inserts.
+- Added supplier fulfilment snapshots and a narrowly scoped product trigger exception allowing inventory quantity changes on active products while protecting active product details.
 - Created a dedicated feature branch and kept `main` unchanged.
 - Added an additive international commerce migration covering supplier country/type, supplier SKU and cost currency, product destination eligibility, processing/shipping estimates, market configuration, supplier shipping proposals with admin approval, order currency/market/FX snapshots, and supplier commercial snapshots on order items. Markets remain disabled and no shipping option is approved by default.
 - Removed the hard-coded administrator UUID fallback from frontend role checks. Administrator access now depends on the authenticated user's database profile role.
 - Prevented the configured/live catalogue from silently showing demo listings when the database returns zero products or a query error. The demo catalogue remains available only in unconfigured preview mode.
-- No production database was changed. The new migration has not been applied or executed against PostgreSQL yet. No payment integration or deployment was performed.
+- No production database was changed. Neither new migration has been applied or executed against PostgreSQL yet. No payment integration or deployment was performed.
 
 ## Important findings and risks to resolve
 
