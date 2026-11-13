@@ -150,7 +150,8 @@ begin
   if p_market_country_code is null or p_market_country_code !~ '^[A-Z]{2}$' then
     raise exception 'Invalid destination market';
   end if;
-  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 30 then
+  if p_items is null or jsonb_typeof(p_items) is distinct from 'array'
+    or jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 30 then
     raise exception 'Your basket must contain between 1 and 30 product lines';
   end if;
   if p_shipping_option_ids is null or jsonb_typeof(p_shipping_option_ids) <> 'object' then
