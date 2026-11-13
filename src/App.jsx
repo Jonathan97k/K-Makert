@@ -16,6 +16,9 @@ const categories = ['All items', 'Groceries', 'Electronics', 'Fashion', 'Home & 
 const money = value => 'MWK ' + Number(value).toLocaleString('en-US')
 const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || ''
 const contactEmail = import.meta.env.VITE_CONTACT_EMAIL || 'info.kelnix@gmail.com'
+// Demo listings are allowed in local development or when explicitly enabled for a preview deployment.
+// Production storefronts must never silently present sample products as real inventory.
+const demoMode = import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_CATALOGUE === 'true'
 
 export default function App() {
   const [category, setCategory] = useState('All items')
@@ -26,7 +29,7 @@ export default function App() {
   const [saved, setSaved] = useState([])
   const [sort, setSort] = useState('featured')
   const [notice, setNotice] = useState('')
-  const [products, setProducts] = useState(demoProducts)
+  const [products, setProducts] = useState(() => demoMode ? demoProducts : [])
   const [user, setUser] = useState(null)
   const [accountOpen, setAccountOpen] = useState(false)
   const [supplierOpen, setSupplierOpen] = useState(false)
@@ -53,7 +56,11 @@ export default function App() {
     supabase.auth.getSession().then(({data}) => { if (alive) setUser(data.session?.user || null) })
     const {data:{subscription}} = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null))
     supabase.from('products').select('id,name,description,category,unit,image_url,selling_price,stock_quantity,suppliers(business_name)').eq('status','active').order('created_at',{ascending:false}).then(({data,error}) => {
-      if (!alive || error || !data?.length) return
+      if (!alive) return
+      if (error || !data?.length) {
+        setProducts(demoMode ? demoProducts : [])
+        return
+      }
       setProducts(data.map(p=>({id:p.id,name:p.name,category:p.category,price:Number(p.selling_price),supplier:p.suppliers?.business_name || 'Marketplace supplier',unit:p.unit || 'piece',image:p.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900&q=85',tag:'Supplier listing'})))
     })
     return () => { alive=false; subscription.unsubscribe() }
@@ -62,7 +69,7 @@ export default function App() {
   useEffect(() => {
     if (!user || !isSupabaseConfigured) { setSupplierAccount(null); setMyProducts([]); setIsAdmin(false); return }
     let alive = true
-    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data,error})=>{if(alive)setIsAdmin(data?.role==='admin' || user.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1')})
+    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data,error})=>{if(alive)setIsAdmin(data?.role === 'admin')})
     supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle().then(async ({data,error}) => {
       if (!alive) return
       let account = data || null
@@ -115,7 +122,7 @@ export default function App() {
     setUser(activeUser)
     const {data,error}=await supabase.from('profiles').select('role').eq('id',activeUser.id).maybeSingle()
     if(error){setIsAdmin(false);setNotice('Could not verify your account role: '+error.message);return}
-    const admin=data?.role==='admin' || activeUser.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1'
+    const admin = data?.role === 'admin'
     setIsAdmin(admin)
     if(admin) {
       await loadAdminData()
@@ -277,10 +284,10 @@ export default function App() {
       <section className="benefits"><div><span className="benefit-icon"><Store size={19}/></span><span><b>Multiple suppliers</b><small>More choice in one place</small></span></div><div><span className="benefit-icon"><ShieldCheck size={19}/></span><span><b>Supplier-aware listings</b><small>Know who you're buying from</small></span></div><div><span className="benefit-icon"><Truck size={19}/></span><span><b>Delivery coordination</b><small>Confirm options when ordering</small></span></div><div><span className="benefit-icon"><MessageCircle size={19}/></span><span><b>Easy WhatsApp orders</b><small>Talk to us before you pay</small></span></div></section>
       <section className="shop-section" id="shop"><div className="section-heading"><div><div className="eyebrow">THE MARKETPLACE</div><h2>Find your next <em>favourite.</em></h2><p>Browse a growing selection from different suppliers.</p></div><button className="filter-button" onClick={()=>setSort(sort==='featured'?'low':sort==='low'?'high':'featured')}><SlidersHorizontal size={16}/> Sort: {sort==='featured'?'Featured':sort==='low'?'Price low–high':'Price high–low'} <ChevronDown size={14}/></button></div>
         <div className="category-row">{categories.map(c=><button key={c} className={category===c?'category active':'category'} onClick={()=>setCategory(c)}>{c}</button>)}</div>
-        <div className="demo-notice"><span className="demo-dot"/> {products === demoProducts ? 'Preview catalogue — sample products and prices only. Live supplier listings will appear here when approved.' : 'Live catalogue — showing approved supplier products.'}</div>
+        <div className="demo-notice"><span className="demo-dot"/> {products === demoProducts ? 'Preview catalogue — sample products and prices only. These listings are not available for purchase.' : products.length ? 'Live catalogue — showing approved supplier products.' : 'No approved products are currently available. Please check back soon.'}</div>
         <div className="product-grid">{filtered.map(p=><article className="product-card" key={p.id}><div className="product-image"><img src={p.image} alt={p.name} loading="lazy"/><span className="product-tag">{p.tag}</span><button className={saved.includes(p.id)?'save-button saved':'save-button'} aria-label="Save product" onClick={()=>setSaved(old=>old.includes(p.id)?old.filter(x=>x!==p.id):[...old,p.id])}><Heart size={17} fill={saved.includes(p.id)?'currentColor':'none'}/></button><button className="quick-add" onClick={()=>add(p.id)}><Plus size={17}/> Add</button></div><div className="product-info"><div className="product-category">{p.category}</div><h3>{p.name}</h3><div className="product-unit">{p.unit}</div><div className="product-bottom"><div><b>{money(p.price)}</b>{p.oldPrice&&<del>{money(p.oldPrice)}</del>}</div><span className="supplier-label"><Store size={12}/>{p.supplier}</span></div></div></article>)}</div>
         {!filtered.length&&<div className="empty-state"><Search size={25}/><h3>No products found</h3><p>Try another search or choose a different category.</p><button className="text-link" onClick={()=>{setQuery('');setCategory('All items')}}>Clear filters <ArrowRight size={15}/></button></div>}
-        <div className="view-all"><span>Showing {filtered.length} sample listings</span><a href="#suppliers">Are you a supplier? List your products <ArrowRight size={15}/></a></div>
+        <div className="view-all"><span>{products === demoProducts ? `Showing ${filtered.length} preview listings` : `${filtered.length} approved products`}</span><a href="#suppliers">Are you a supplier? List your products <ArrowRight size={15}/></a></div>
       </section>
       <section className="how-section" id="how"><div className="how-intro"><div className="eyebrow">SIMPLE BY DESIGN</div><h2>From browsing<br/>to <em>your doorstep.</em></h2><p>We bring different suppliers together so you can discover more without jumping between stores.</p></div><div className="steps"><div className="step"><span>01</span><div><b>Discover</b><p>Browse products from multiple suppliers in one catalogue.</p></div></div><div className="step"><span>02</span><div><b>Choose</b><p>Add what you need to your basket and review your order.</p></div></div><div className="step"><span>03</span><div><b>Confirm</b><p>Send your order on WhatsApp. We'll confirm stock, payment and delivery.</p></div></div></div></section>
       <section className="supplier-cta" id="suppliers"><div className="supplier-icon"><Store size={25}/></div><div><div className="eyebrow">GROW WITH KELNIX</div><h2>Have products to sell?</h2><p>Join a marketplace built to help suppliers reach more customers. Share your catalogue and let us help you get discovered.</p></div><button className="light-button" onClick={()=>{setSupplierOpen(true);setSupplierForm(f=>({...f,email:user?.email||f.email}))}}>Become a supplier <ArrowRight size={17}/></button><a style={{display:'none'}} className="light-button" href={whatsappNumber?'https://wa.me/'+whatsappNumber.replace(/\D/g,'')+'?text='+encodeURIComponent('Hello Kelnix, I am interested in becoming a marketplace supplier.'):'#'} onClick={e=>{if(!whatsappNumber){e.preventDefault();setNotice('Supplier onboarding contact is not connected yet. Add VITE_WHATSAPP_NUMBER to activate it.')}}}>Become a supplier <ArrowRight size={17}/></a></section>
