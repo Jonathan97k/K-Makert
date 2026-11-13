@@ -75,7 +75,7 @@ These migrations are committed but are **not yet applied to a database**. They m
 | International commerce data | Additive schema drafted; migration validation pending |
 | Secure order placement | RPC and storefront checkout wired; test validation pending |
 | PayChangu | Edge Functions and webhook handler committed; credentials, deployment and test transactions pending |
-| JARVIS fulfilment bridge | Payment-confirmed outbox event committed; JARVIS worker not yet connected |
+| JARVIS fulfilment bridge | Payment-confirmed outbox plus authenticated polling/ack endpoint committed; worker connection pending |
 | Payment integration | Provider selection and credentials required |
 
 The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
