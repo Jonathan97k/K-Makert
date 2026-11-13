@@ -316,7 +316,7 @@ begin
 
   return query select v_order_id, v_order_number, v_market.currency_code, v_subtotal, v_shipping, v_total;
 end;
-$;
+$$;
 
 revoke all on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) from public, anon;
 grant execute on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) to authenticated;
