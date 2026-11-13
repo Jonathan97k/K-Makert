@@ -1,0 +1,5 @@
+# Keep Supabase JWT verification enabled for customer-facing functions.
+# PayChangu cannot send a Supabase JWT; this endpoint verifies PayChangu's HMAC
+# Signature header itself before trusting the event.
+[functions.paychangu-webhook]
+verify_jwt = false
