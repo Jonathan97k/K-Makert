@@ -248,4 +248,12 @@ begin
   end if;
 end $$;
 
+-- Idempotent checkout request key; prevents duplicate orders on browser retries.
+alter table public.orders
+  add column if not exists client_request_id uuid;
+
+create unique index if not exists orders_customer_client_request_uidx
+  on public.orders(customer_id, client_request_id)
+  where client_request_id is not null;
+
 commit;
