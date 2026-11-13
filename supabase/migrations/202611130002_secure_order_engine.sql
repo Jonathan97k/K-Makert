@@ -138,6 +138,8 @@ begin
     raise exception 'A unique checkout request ID is required';
   end if;
 
+  perform pg_advisory_xact_lock(hashtextextended(v_customer_id::text || ':' || p_client_request_id::text, 0));
+
   select * into v_existing_order from public.orders
   where customer_id = v_customer_id and client_request_id = p_client_request_id;
   if found then
@@ -182,7 +184,7 @@ begin
 
   -- Validate and lock each product, calculate prices from the database, and
   -- reserve available stock in the same transaction.
-  for v_item in select value from jsonb_array_elements(p_items)
+  for v_item in select value from jsonb_array_elements(p_items) order by value->>'product_id'
   loop
     if jsonb_typeof(v_item) <> 'object'
       or coalesce(v_item->>'product_id','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
