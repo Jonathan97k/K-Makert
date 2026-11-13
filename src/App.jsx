@@ -52,6 +52,7 @@ export default function App() {
   const [checkoutForm, setCheckoutForm] = useState({customer_name:'',customer_phone:'',delivery_address:'',district:''})
   const [shippingOptions, setShippingOptions] = useState([])
   const [shippingSelection, setShippingSelection] = useState({})
+  useEffect(()=>{setCheckoutRequestId('')},[cart])
   const [paymentMessage, setPaymentMessage] = useState('Checking your payment with PayChangu…')
   const [shippingForm, setShippingForm] = useState({supplier_id:'',service_name:'',shipping_cost:'',transit_days_min:'',transit_days_max:''})
 
