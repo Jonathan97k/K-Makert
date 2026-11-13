@@ -32,8 +32,19 @@ Deno.serve(async (req) => {
     }
 
     const payload = JSON.parse(raw);
+
+    // This endpoint is for Kelnix Standard Checkout transactions. PayChangu
+    // can also send Direct API charge and payout events when all webhook
+    // notifications are enabled. Acknowledge unrelated event types so the
+    // provider does not retry them; never treat them as Kelnix checkout payments.
+    if (payload?.event_type !== "checkout.payment") {
+      return reply({ received: true, ignored: true, reason: "Event is not a Kelnix Standard Checkout payment" }, 200);
+    }
+
     const txRef = typeof payload.tx_ref === "string" ? payload.tx_ref : "";
-    if (!/^KELNIX-[0-9a-f-]{36}$/i.test(txRef)) return reply({ error: "Unknown transaction reference" }, 400);
+    if (!/^KELNIX-[0-9a-f-]{36}$/i.test(txRef)) {
+      return reply({ received: true, ignored: true, reason: "No matching Kelnix checkout reference" }, 200);
+    }
 
     const url = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
