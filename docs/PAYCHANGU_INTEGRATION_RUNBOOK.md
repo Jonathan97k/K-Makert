@@ -43,6 +43,8 @@ Official provider references:
 
 The customer return page also calls `verify-paychangu-payment`, so the system does not rely only on a browser redirect or webhook delivery.
 
+The webhook endpoint also acknowledges unrelated PayChangu event types (such as `api.charge.payment` direct-charge events and payout notifications) with HTTP 200 without treating them as Kelnix Standard Checkout payments. This avoids unnecessary provider retries when all notification checkboxes are enabled.
+
 ## Supabase deployment
 
 Run these commands from the repository root after linking the intended Supabase project. Review the project ref before deploying; do not apply these migrations to a production database until they have passed in a disposable test project.
