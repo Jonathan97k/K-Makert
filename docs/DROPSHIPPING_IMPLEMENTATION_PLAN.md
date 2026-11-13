@@ -47,7 +47,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Added an additive international commerce migration covering supplier country/type, supplier SKU and cost currency, product destination eligibility, processing/shipping estimates, market configuration, supplier shipping proposals with admin approval, order currency/market/FX snapshots, and supplier commercial snapshots on order items. Markets remain disabled and no shipping option is approved by default.
 - Removed the hard-coded administrator UUID fallback from frontend role checks. Administrator access now depends on the authenticated user's database profile role.
 - Prevented the configured/live catalogue from silently showing demo listings when the database returns zero products or a query error. The demo catalogue remains available only in unconfigured preview mode.
-- GitHub Actions frontend build and Edge Function type-checks passed. No production database was changed. The new migrations and Edge Functions are committed but have not been deployed or executed against a test Supabase project. No PayChangu credentials or dashboard webhook have been configured, and no live charge has been initiated.
+- GitHub Actions frontend build and Edge Function type-checks passed. On 13 November 2026, migrations 001–004 were applied to the existing Supabase project and all four Edge Functions were deployed ACTIVE. No customer, product, supplier, order or payment rows existed; three profile records were retained. PayChangu/JARVIS secrets and the merchant webhook are not configured, no end-to-end payment test has been run, and no live charge has been initiated.
 
 ## Important findings and risks to resolve
 
@@ -57,7 +57,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Client-submitted order totals must never be trusted. The server must re-read active product prices and calculate amounts.
 - Supplier ownership and privileged status fields have database guardrails in the migration, but all RLS policies, grants, trigger behaviour, and security-definer functions still require a complete review.
 - A profile role check in the UI is not a security boundary. Every privileged database operation must be enforced by RLS or trusted server-side code.
-- The migration's live application status is unverified. Do not assume it has been applied.
+- The commerce migrations are now applied to the existing Supabase project; database-level automated integration testing remains outstanding.
 - PayChangu's supported international currencies, cross-border payment methods, settlement currencies, payout timing, and refund capabilities must be confirmed before designing checkout around it.
 - No JARVIS integration is currently established in this repository.
 
@@ -92,7 +92,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 
 ### Phase 0 — Repository and environment verification
 - Complete file inventory and identify routes, components, Supabase usage, migrations, PWA setup, deployment config, and tests.
-- Confirm current Supabase project/migration state with the owner; never apply migrations without explicit approval.
+- Confirm Supabase project identity and inspect migration state before any schema changes; owner explicitly approved replacing the empty marketplace data foundation.
 - Run dependency install/build/tests in a controlled environment and record baseline results.
 - Confirm current hosting and environment variable names without exposing secret values.
 
@@ -105,7 +105,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 ### Phase 2 — International commerce data model
 - [x] Draft additive schema migration for country/market, currency, supplier country, shipping methods, delivery estimates, product destination eligibility, supplier SKU, exchange-rate snapshots, and order snapshots.
 - [x] Preserve current tables and local marketplace data through additive columns/tables; existing records retain MW/MWK defaults.
-- [ ] Validate migration against a disposable Supabase/PostgreSQL database before production approval.
+- [x] Apply the commerce migrations to the existing Supabase project after inspecting its schema and confirming there were no commerce records to preserve.
 - Define data retention and privacy requirements for launch markets.
 
 ### Phase 3 — Supplier sourcing and catalogue operations
@@ -141,4 +141,4 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 
 ## Current status
 
-This is an implementation roadmap, not a claim that the listed capabilities already exist. Work should be delivered in small, reviewable commits with build/test evidence. Do not merge to `main`, apply a production migration, connect live payments, or send customer/creator messages without explicit approval.
+This is an implementation roadmap, not a claim that the listed capabilities already exist. The existing Supabase project has the commerce schema and four Edge Functions deployed, but payment secrets, merchant webhook setup, frontend hosting configuration, shipping data, end-to-end payment tests and the JARVIS consumer remain outstanding. Work should be delivered in small, reviewable commits with build/test evidence. Do not merge to `main`, enable live payments, or send customer/creator messages without explicit approval.
