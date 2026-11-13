@@ -2,6 +2,28 @@
 
 ## Scope and current limits
 
+## Deployment record — 13 November 2026
+
+The existing Kelnix Supabase project has now been upgraded. The following migrations are recorded as applied:
+
+- Original marketplace migrations.
+- `202611130001_international_commerce_foundation`
+- `202611130002_secure_order_engine`
+- `202611130003_paychangu_payment_and_jarvis_outbox`
+- `202611130004_security_and_query_indexes`
+
+All four Edge Functions are deployed and report ACTIVE:
+
+- `initiate-paychangu-payment` — JWT verification enabled.
+- `verify-paychangu-payment` — JWT verification enabled.
+- `paychangu-webhook` — JWT verification disabled; raw-body HMAC authentication is implemented in the handler.
+- `jarvis-outbox` — JWT verification disabled; dedicated shared-secret authentication is implemented in the handler.
+
+No customer orders, products, supplier records or payment records existed at deployment time. Three profile records were retained so existing sign-in identities were not destroyed.
+
+**Still outstanding:** the four Edge Function secrets, PayChangu merchant webhook configuration, frontend hosting environment variables, shipping-service setup, leaked-password protection in Supabase Auth, and end-to-end test transactions. Do not accept live payments until these are complete.
+
+
 The implementation uses PayChangu Standard Checkout. PayChangu's current Standard Checkout documentation lists MWK and USD as supported currencies. The current Kelnix order function enables Malawi (MWK) only; no international market is enabled by this work. Do not assume PayChangu settles supplier payments to China or supports every target-country currency.
 
 Official provider references:
@@ -59,7 +81,7 @@ The frontend host must serve the Vite app for these paths (configure SPA rewrite
 ## Required environment / deployment checks
 
 - Frontend has the correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
-- Supabase migrations 001, 002 and 003 are applied in order to the test project.
+- Supabase migrations 001–004 are applied to the existing Supabase project.
 - At least one supplier is approved and has an active product with stock.
 - An administrator has configured an approved, enabled MWK shipping option for every supplier in the basket. Kelnix will not invent or assume delivery prices. The admin dashboard now contains a delivery-service form for this.
 - PayChangu test secret and webhook secret are configured as Supabase secrets.
@@ -78,8 +100,8 @@ JARVIS can poll the service-to-service endpoint `https://YOUR_PROJECT_REF.supaba
 
 ## Not yet completed / not claimed
 
-- The migrations and Edge Functions have been committed but have not been deployed or executed against a test Supabase project.
-- PayChangu test credentials and dashboard webhook configuration have not been supplied or configured.
+- The migrations have been applied to the existing Supabase project and all four Edge Functions are deployed. The SQL was applied successfully, but a separate automated PostgreSQL test suite has not been run.
+- PayChangu test credentials and dashboard webhook configuration have not yet been configured.
 - A test-mode end-to-end transaction has not been run.
 - The JARVIS outbox and authenticated claim/ack endpoint are implemented; a live JARVIS consumer/worker and supplier purchase adapters are not yet connected.
 - Supplier payout, refunds, reconciliation scheduling and international settlement routes remain separate work.
