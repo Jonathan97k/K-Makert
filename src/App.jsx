@@ -53,8 +53,13 @@ export default function App() {
     supabase.auth.getSession().then(({data}) => { if (alive) setUser(data.session?.user || null) })
     const {data:{subscription}} = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user || null))
     supabase.from('products').select('id,name,description,category,unit,image_url,selling_price,stock_quantity,suppliers(business_name)').eq('status','active').order('created_at',{ascending:false}).then(({data,error}) => {
-      if (!alive || error || !data?.length) return
-      setProducts(data.map(p=>({id:p.id,name:p.name,category:p.category,price:Number(p.selling_price),supplier:p.suppliers?.business_name || 'Marketplace supplier',unit:p.unit || 'piece',image:p.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900&q=85',tag:'Supplier listing'})))
+      if (!alive) return
+      if (error) {
+        setProducts([])
+        setNotice('We could not load the live product catalogue. Please try again later.')
+        return
+      }
+      setProducts((data || []).map(p=>({id:p.id,name:p.name,category:p.category,price:Number(p.selling_price),supplier:p.suppliers?.business_name || 'Marketplace supplier',unit:p.unit || 'piece',image:p.image_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=900&q=85',tag:'Supplier listing'})))
     })
     return () => { alive=false; subscription.unsubscribe() }
   }, [])
@@ -62,7 +67,7 @@ export default function App() {
   useEffect(() => {
     if (!user || !isSupabaseConfigured) { setSupplierAccount(null); setMyProducts([]); setIsAdmin(false); return }
     let alive = true
-    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data,error})=>{if(alive)setIsAdmin(data?.role==='admin' || user.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1')})
+    supabase.from('profiles').select('role').eq('id',user.id).maybeSingle().then(({data,error})=>{if(alive)setIsAdmin(data?.role==='admin')})
     supabase.from('suppliers').select('*').eq('owner_id',user.id).maybeSingle().then(async ({data,error}) => {
       if (!alive) return
       let account = data || null
@@ -115,7 +120,7 @@ export default function App() {
     setUser(activeUser)
     const {data,error}=await supabase.from('profiles').select('role').eq('id',activeUser.id).maybeSingle()
     if(error){setIsAdmin(false);setNotice('Could not verify your account role: '+error.message);return}
-    const admin=data?.role==='admin' || activeUser.id==='0534a45f-5fc9-4f3b-b1e8-74aa59f5e7e1'
+    const admin=data?.role==='admin'
     setIsAdmin(admin)
     if(admin) {
       await loadAdminData()
