@@ -177,12 +177,27 @@ These are business/configuration dependencies, not reasons to rewrite the code:
 
 This is a source-level reuse/customization audit, not a penetration test, production readiness certification or proof that the current app builds. No code behavior has been runtime-tested, no database was modified, no payment provider was contacted, and no production deployment was changed.
 
-## 9. Immediate next engineering tasks
+## 9. Work completed on the audit branch
 
-1. Add CI build validation and a small test/lint foundation.
-2. Refactor catalogue loading so demo products cannot masquerade as live inventory.
-3. Remove the hard-coded admin UUID and rely on the verified profile role plus RLS.
-4. Add a secure public supplier display mechanism.
-5. Design and test transactional checkout before adding a payment gateway.
+The following changes have been committed to `work/reuse-customization-audit` and have not been merged into `main`:
 
-**Recommended first code change:** Stage 1 stabilization. It is small, reusable, low-risk, and protects the existing work before larger commerce features are added.
+- Added this reuse/customization audit.
+- Added a GitHub Actions workflow to run the production Vite build on pushes to `main` and `work/**`, and on pull requests to `main`.
+- Removed the hard-coded administrator UUID fallback. The interface now checks the authenticated profile role; database RLS remains the actual security boundary.
+- Demo products are enabled only in local development or when `VITE_ENABLE_DEMO_CATALOGUE=true` is explicitly configured.
+- Production with an empty or unavailable catalogue no longer falls back to sample inventory.
+- Preview listings are labelled and cannot be checked out.
+- Empty production catalogues now have a dedicated empty state.
+- Updated README documentation to explain the preview-catalogue flag and link this audit.
+
+The Vercel status check was still pending when this document was updated. No successful build has yet been independently confirmed. No live database or payment configuration was changed.
+
+## 10. Remaining immediate engineering tasks
+
+1. Confirm the branch preview/build result and add deterministic dependency locking plus lint/test checks.
+2. Add a safe public supplier display mechanism without exposing private supplier contact fields.
+3. Complete an adversarial RLS review and test the database policies against a staging Supabase project.
+4. Design and test transactional checkout, immutable order snapshots and stock reservation before adding a payment gateway.
+5. Confirm the first launch market, currency, payment settlement route and fulfilment model.
+
+The first stabilization patch is intentionally small. It protects the existing work before larger commerce features are added.
