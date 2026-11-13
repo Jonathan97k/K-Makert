@@ -61,7 +61,7 @@ The frontend host must serve the Vite app for these paths (configure SPA rewrite
 - Frontend has the correct `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 - Supabase migrations 001, 002 and 003 are applied in order to the test project.
 - At least one supplier is approved and has an active product with stock.
-- That supplier has an approved, enabled MWK shipping option for destination MW. Kelnix will not invent or assume delivery prices.
+- An administrator has configured an approved, enabled MWK shipping option for every supplier in the basket. Kelnix will not invent or assume delivery prices. The admin dashboard now contains a delivery-service form for this.
 - PayChangu test secret and webhook secret are configured as Supabase secrets.
 - Webhook URL is saved in the PayChangu test dashboard.
 - Test a success, failure, duplicate webhook, invalid signature, wrong amount, wrong currency, delayed webhook, and customer return before enabling live mode.
@@ -81,6 +81,6 @@ JARVIS can poll the service-to-service endpoint `https://YOUR_PROJECT_REF.supaba
 - The migrations and Edge Functions have been committed but have not been deployed or executed against a test Supabase project.
 - PayChangu test credentials and dashboard webhook configuration have not been supplied or configured.
 - A test-mode end-to-end transaction has not been run.
-- The JARVIS outbox is implemented; a live JARVIS consumer/worker and supplier purchase adapters are not yet connected.
+- The JARVIS outbox and authenticated claim/ack endpoint are implemented; a live JARVIS consumer/worker and supplier purchase adapters are not yet connected.
 - Supplier payout, refunds, reconciliation scheduling and international settlement routes remain separate work.
 - No live customer charge has been initiated.
