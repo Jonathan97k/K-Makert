@@ -99,6 +99,7 @@ create or replace function public.place_marketplace_order(
   p_customer_phone text,
   p_delivery_address text,
   p_district text,
+  p_client_request_id uuid,
   p_market_country_code text default 'MW',
   p_shipping_option_ids jsonb default '{}'::jsonb,
   p_notes text default null
@@ -113,6 +114,7 @@ declare
   v_market public.market_configs%rowtype;
   v_order_id uuid;
   v_order_number text;
+  v_existing_order public.orders%rowtype;
   v_subtotal numeric(14,2) := 0;
   v_shipping numeric(14,2) := 0;
   v_total numeric(14,2) := 0;
@@ -130,6 +132,19 @@ declare
 begin
   if v_customer_id is null then
     raise exception 'Sign in before placing an order' using errcode = '28000';
+  end if;
+
+  if p_client_request_id is null then
+    raise exception 'A unique checkout request ID is required';
+  end if;
+
+  select * into v_existing_order from public.orders
+  where customer_id = v_customer_id and client_request_id = p_client_request_id;
+  if found then
+    return query select v_existing_order.id, v_existing_order.order_number,
+      v_existing_order.currency_code, v_existing_order.subtotal,
+      v_existing_order.shipping_amount, v_existing_order.total;
+    return;
   end if;
 
   if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(p_customer_name) > 160 then
@@ -245,12 +260,13 @@ begin
     customer_id, customer_name, customer_phone, delivery_address, district, notes,
     subtotal, delivery_fee, total, status, payment_status,
     market_country_code, currency_code, shipping_amount, tax_amount, discount_amount,
-    base_currency_code
+    base_currency_code, client_request_id
   ) values (
     v_customer_id, trim(p_customer_name), trim(p_customer_phone), trim(p_delivery_address),
     nullif(trim(coalesce(p_district,'')),''), nullif(trim(coalesce(p_notes,'')), ''),
     v_subtotal, v_shipping, v_total, 'pending', 'unpaid',
-    p_market_country_code, v_market.currency_code, v_shipping, 0, 0, v_market.currency_code
+    p_market_country_code, v_market.currency_code, v_shipping, 0, 0, v_market.currency_code,
+    p_client_request_id
   ) returning id, orders.order_number into v_order_id, v_order_number;
 
   -- Re-read products to write authoritative immutable line snapshots.
@@ -298,7 +314,7 @@ begin
 end;
 $$;
 
-revoke all on function public.place_marketplace_order(jsonb,text,text,text,text,text,jsonb,text) from public, anon;
-grant execute on function public.place_marketplace_order(jsonb,text,text,text,text,text,jsonb,text) to authenticated;
+revoke all on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) from public, anon;
+grant execute on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) to authenticated;
 
 commit;
