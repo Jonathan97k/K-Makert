@@ -31,9 +31,11 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 
 ## Work completed on this branch
 
+- Created a dedicated feature branch and kept `main` unchanged.
+- Added an additive international commerce migration covering supplier country/type, supplier SKU and cost currency, product destination eligibility, processing/shipping estimates, market configuration, supplier shipping proposals with admin approval, order currency/market/FX snapshots, and supplier commercial snapshots on order items. Markets remain disabled and no shipping option is approved by default.
 - Removed the hard-coded administrator UUID fallback from frontend role checks. Administrator access now depends on the authenticated user's database profile role.
 - Prevented the configured/live catalogue from silently showing demo listings when the database returns zero products or a query error. The demo catalogue remains available only in unconfigured preview mode.
-- No production database was changed. No payment integration or deployment was performed.
+- No production database was changed. The new migration has not been applied or executed against PostgreSQL yet. No payment integration or deployment was performed.
 
 ## Important findings and risks to resolve
 
@@ -89,8 +91,9 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Add audit events for privileged changes.
 
 ### Phase 2 — International commerce data model
-- Add country/market, currency, supplier country, shipping methods, delivery estimates, product destination eligibility, supplier SKU, exchange-rate snapshots, and order snapshots.
-- Preserve current tables and local marketplace data where possible; use additive migrations and explicit backfills.
+- [x] Draft additive schema migration for country/market, currency, supplier country, shipping methods, delivery estimates, product destination eligibility, supplier SKU, exchange-rate snapshots, and order snapshots.
+- [x] Preserve current tables and local marketplace data through additive columns/tables; existing records retain MW/MWK defaults.
+- [ ] Validate migration against a disposable Supabase/PostgreSQL database before production approval.
 - Define data retention and privacy requirements for launch markets.
 
 ### Phase 3 — Supplier sourcing and catalogue operations
