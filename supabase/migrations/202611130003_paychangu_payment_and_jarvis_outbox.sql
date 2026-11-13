@@ -21,6 +21,11 @@ create index if not exists payments_pending_reconciliation_idx
   on public.payments(status, updated_at)
   where status in ('initiated','pending','review_required');
 
+-- At most one in-flight PayChangu checkout per order, including concurrent browser tabs.
+create unique index if not exists payments_one_open_paychangu_per_order_idx
+  on public.payments(order_id)
+  where provider = 'paychangu' and status in ('initiated','pending');
+
 create table if not exists public.payment_webhook_events (
   id uuid primary key default gen_random_uuid(),
   provider text not null,
