@@ -73,13 +73,15 @@ Deno.serve(async (req) => {
       .eq("order_id", order.id)
       .eq("provider", "paychangu")
       .in("status", ["initiated", "pending"])
-      .not("checkout_url", "is", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (existing?.checkout_url && Number(existing.amount) === amount && existing.currency === currency) {
-      return json({ checkout_url: existing.checkout_url, tx_ref: existing.provider_reference, reused: true });
+    if (existing) {
+      if (existing.checkout_url && Number(existing.amount) === amount && existing.currency === currency) {
+        return json({ checkout_url: existing.checkout_url, tx_ref: existing.provider_reference, reused: true });
+      }
+      return json({ error: "A payment session is already being prepared. Wait briefly and retry." }, 409);
     }
 
     const txRef = `KELNIX-${crypto.randomUUID()}`;
@@ -98,7 +100,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (paymentError || !payment) {
-      return json({ error: "Could not create payment record" }, 500);
+      // Another tab may have won the partial unique-index race. Reuse its
+      // checkout session if ready; otherwise ask the customer to retry shortly.
+      const { data: concurrent } = await admin.from("payments")
+        .select("provider_reference,checkout_url,amount,currency,status")
+        .eq("order_id", order.id).eq("provider", "paychangu")
+        .in("status", ["initiated", "pending"])
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (concurrent?.checkout_url && Number(concurrent.amount) === amount && concurrent.currency === currency) {
+        return json({ checkout_url: concurrent.checkout_url, tx_ref: concurrent.provider_reference, reused: true });
+      }
+      return json({ error: "A payment session is already being prepared. Wait briefly and retry." }, 409);
     }
 
     const names = String(order.customer_name ?? "").trim().split(/\s+/);
