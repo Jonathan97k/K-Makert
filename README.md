@@ -17,9 +17,10 @@ The products currently in `src/App.jsx` are **sample listings for interface test
 
 ## Marketplace backend foundation (new)
 
-The first database migration is at:
+The initial database migrations are at:
 
-`supabase/migrations/202611080001_marketplace_core.sql`
+- `supabase/migrations/202611080001_marketplace_core.sql` — original Malawi multi-supplier marketplace schema.
+- `supabase/migrations/202611130001_international_commerce_foundation.sql` — additive international supplier, market, shipping, currency and order-snapshot fields.
 
 It creates the core data model for:
 
@@ -40,7 +41,7 @@ It creates the core data model for:
    `update public.profiles set role = 'admin' where id = '<auth-user-uuid>';`
 5. Add the Supabase project URL and publishable/anon key to the Vercel project environment. Never put a service-role key in browser code.
 
-The migration is committed but is **not yet applied to a live database**. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
+These migrations are committed but are **not yet confirmed applied to a live database**. The international migration has not yet been executed against a disposable test database and must be validated before production use. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
 
 ## Local development
 
@@ -69,6 +70,7 @@ The migration is committed but is **not yet applied to a live database**. Until 
 | Admin dashboard | Database schema prepared; live UI/API pending |
 | Order management | Database schema prepared; transactional order flow pending |
 | Profit tracking | Ledger schema prepared; calculation and reporting pending |
+| International commerce data | Additive schema drafted; migration validation pending |
 | Payment integration | Provider selection and credentials required |
 
 The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
