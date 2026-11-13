@@ -48,6 +48,7 @@ export default function App() {
   const [productForm, setProductForm] = useState({name:'',category:'Groceries',description:'',unit:'piece',cost_price:'',selling_price:'',stock_quantity:'',image_url:''})
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [checkoutBusy, setCheckoutBusy] = useState(false)
+  const [checkoutRequestId, setCheckoutRequestId] = useState('')
   const [checkoutForm, setCheckoutForm] = useState({customer_name:'',customer_phone:'',delivery_address:'',district:''})
   const [shippingOptions, setShippingOptions] = useState([])
   const [shippingSelection, setShippingSelection] = useState({})
@@ -284,6 +285,7 @@ export default function App() {
     if (!cartItems.length) return
     if (!user) { setCartOpen(false); setAuthMode('signin'); setAccountOpen(true); setNotice('Sign in before placing an order.'); return }
     setCheckoutForm(old=>({...old,customer_name:old.customer_name || user.user_metadata?.full_name || '',customer_phone:old.customer_phone || user.user_metadata?.phone || ''}))
+    setCheckoutRequestId(old=>old||crypto.randomUUID())
     setCartOpen(false)
     setCheckoutOpen(true)
   }
@@ -316,7 +318,7 @@ export default function App() {
         p_customer_phone:checkoutForm.customer_phone,
         p_delivery_address:checkoutForm.delivery_address,
         p_district:checkoutForm.district,
-        p_client_request_id:crypto.randomUUID(),
+        p_client_request_id:checkoutRequestId||crypto.randomUUID(),
         p_market_country_code:'MW',
         p_shipping_option_ids:shippingSelection,
         p_notes:null
