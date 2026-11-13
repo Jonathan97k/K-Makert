@@ -35,7 +35,10 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Added payment-state finalisation restricted to the Supabase service role. Exact reference, success status, amount and currency must match; mismatches are held for review.
 - Successful payment confirmation marks the order paid/confirmed and writes an idempotent `order.payment_confirmed` event to the JARVIS outbox. Supplier fulfilments move to `queued_for_review`; supplier purchasing still requires human approval.
 - Connected the storefront checkout form to the secure order RPC and PayChangu hosted checkout, including a payment return verification page.
-- Added a PayChangu deployment runbook and Supabase function configuration that disables JWT verification only for the HMAC-protected provider webhook.
+- Added a PayChangu deployment runbook and Supabase function configuration that disables JWT verification only for the HMAC-protected provider webhook and shared-secret-protected JARVIS outbox.
+- Added administrator controls to configure actual approved Malawi shipping services per supplier; customer checkout blocks if a supplier has no approved delivery service.
+- Added concurrency protection for duplicate PayChangu checkout sessions and retry-safe checkout request IDs.
+- Added a shared-secret JARVIS outbox polling/acknowledgement endpoint with row-locked event claims, 15-minute leases and retry limits.
 - Added a trusted transactional `place_marketplace_order` database function. It requires an authenticated customer, validates the destination market and basket, serializes customer idempotency keys, locks products in deterministic order, calculates product prices from the database, checks approved suppliers and destination eligibility, reserves stock, requires one approved shipping service per supplier, and writes order, line-item and supplier-fulfilment snapshots in one transaction.
 - Removed direct customer insert policies/privileges for orders and order items; duplicate checkout submissions using the same customer request ID return the existing order; the browser cannot set its own order totals, supplier IDs, prices or payment status through direct table inserts.
 - Added supplier fulfilment snapshots and a narrowly scoped product trigger exception allowing inventory quantity changes on active products while protecting active product details.
