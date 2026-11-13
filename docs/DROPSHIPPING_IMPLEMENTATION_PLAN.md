@@ -39,6 +39,7 @@ The existing Malawi multi-supplier marketplace remains a reusable foundation. In
 - Added administrator controls to configure actual approved Malawi shipping services per supplier; customer checkout blocks if a supplier has no approved delivery service.
 - Added concurrency protection for duplicate PayChangu checkout sessions and retry-safe checkout request IDs.
 - Added a shared-secret JARVIS outbox polling/acknowledgement endpoint with row-locked event claims, 15-minute leases and retry limits.
+- Added GitHub Actions validation for the Vite production build and Deno type-checking of all four Edge Functions.
 - Added a trusted transactional `place_marketplace_order` database function. It requires an authenticated customer, validates the destination market and basket, serializes customer idempotency keys, locks products in deterministic order, calculates product prices from the database, checks approved suppliers and destination eligibility, reserves stock, requires one approved shipping service per supplier, and writes order, line-item and supplier-fulfilment snapshots in one transaction.
 - Removed direct customer insert policies/privileges for orders and order items; duplicate checkout submissions using the same customer request ID return the existing order; the browser cannot set its own order totals, supplier IDs, prices or payment status through direct table inserts.
 - Added supplier fulfilment snapshots and a narrowly scoped product trigger exception allowing inventory quantity changes on active products while protecting active product details.
