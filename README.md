@@ -22,6 +22,7 @@ The initial database migrations are at:
 - `supabase/migrations/202611080001_marketplace_core.sql` — original Malawi multi-supplier marketplace schema.
 - `supabase/migrations/202611130001_international_commerce_foundation.sql` — additive international supplier, market, shipping, currency and order-snapshot fields.
 - `supabase/migrations/202611130002_secure_order_engine.sql` — trusted transactional order-placement function and order fulfilment snapshots.
+- `supabase/migrations/202611130003_paychangu_payment_and_jarvis_outbox.sql` — payment state, verified finalisation and JARVIS outbox.
 
 It creates the core data model for:
 
@@ -42,7 +43,7 @@ It creates the core data model for:
    `update public.profiles set role = 'admin' where id = '<auth-user-uuid>';`
 5. Add the Supabase project URL and publishable/anon key to the Vercel project environment. Never put a service-role key in browser code.
 
-These migrations are committed but are **not yet confirmed applied to a live database**. The international and order-engine migrations have not yet been executed against a disposable test database and must be validated before production use. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
+These migrations are committed but are **not yet applied to a database**. They must first be validated in a disposable Supabase test project before production use. Until Supabase is provisioned and configured, supplier registration, dashboard data, stock updates, order persistence and profit reports are not live.
 
 ## Local development
 
@@ -72,7 +73,9 @@ These migrations are committed but are **not yet confirmed applied to a live dat
 | Order management | Database schema prepared; transactional order flow pending |
 | Profit tracking | Ledger schema prepared; calculation and reporting pending |
 | International commerce data | Additive schema drafted; migration validation pending |
-| Secure order placement | Database function drafted; PostgreSQL/RLS validation pending |
+| Secure order placement | RPC and storefront checkout wired; test validation pending |
+| PayChangu | Edge Functions and webhook handler committed; credentials, deployment and test transactions pending |
+| JARVIS fulfilment bridge | Payment-confirmed outbox event committed; JARVIS worker not yet connected |
 | Payment integration | Provider selection and credentials required |
 
 The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
