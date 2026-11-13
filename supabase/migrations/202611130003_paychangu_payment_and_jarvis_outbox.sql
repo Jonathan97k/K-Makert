@@ -124,6 +124,27 @@ begin
     return jsonb_build_object('ok',true,'already_paid',true,'order_id',v_order.id);
   end if;
 
+  if lower(coalesce(p_verified_status,'')) in ('failed','cancelled','canceled') then
+    update public.payments set status = 'failed',
+      failure_reason = 'PayChangu verified that the payment did not complete',
+      metadata = coalesce(metadata,'{}'::jsonb) || jsonb_build_object('last_verification',coalesce(p_verified_payload,'{}'::jsonb)),
+      updated_at = now()
+    where id = v_payment.id;
+    update public.orders set payment_status = 'failed', updated_at = now()
+    where id = v_order.id and payment_status <> 'paid';
+    return jsonb_build_object('ok',true,'payment_status','failed','order_id',v_order.id);
+  end if;
+
+  if lower(coalesce(p_verified_status,'')) in ('pending','processing','initiated') then
+    update public.payments set status = 'pending',
+      metadata = coalesce(metadata,'{}'::jsonb) || jsonb_build_object('last_verification',coalesce(p_verified_payload,'{}'::jsonb)),
+      updated_at = now()
+    where id = v_payment.id and status <> 'succeeded';
+    update public.orders set payment_status = 'pending', updated_at = now()
+    where id = v_order.id and payment_status not in ('paid','review_required');
+    return jsonb_build_object('ok',true,'payment_status','pending','order_id',v_order.id);
+  end if;
+
   if lower(coalesce(p_verified_status,'')) <> 'success'
     or p_verified_amount is null
     or p_verified_currency is null
