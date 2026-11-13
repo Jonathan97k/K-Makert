@@ -31,14 +31,16 @@ supabase db push
 supabase secrets set PAYCHANGU_SECRET_KEY="YOUR_PAYCHANGU_TEST_SECRET"
 supabase secrets set PAYCHANGU_WEBHOOK_SECRET="YOUR_PAYCHANGU_WEBHOOK_SECRET"
 supabase secrets set SITE_URL="https://YOUR_FRONTEND_HOST"
+supabase secrets set JARVIS_WEBHOOK_SECRET="GENERATE_A_LONG_RANDOM_SECRET"
 supabase functions deploy initiate-paychangu-payment
 supabase functions deploy verify-paychangu-payment
 supabase functions deploy paychangu-webhook --no-verify-jwt
+supabase functions deploy jarvis-outbox --no-verify-jwt
 ```
 
 Supabase supplies the project URL, anon key and service-role key to Edge Functions in its runtime environment. Never put the service-role key or PayChangu secret in Vite variables or frontend code.
 
-The repository's `supabase/config.toml` disables Supabase JWT verification only for the webhook function. That endpoint performs PayChangu HMAC validation itself. Customer-facing functions retain JWT verification and independently validate the signed-in user.
+The repository's `supabase/config.toml` disables Supabase JWT verification only for the provider webhook and JARVIS outbox endpoints. The webhook performs PayChangu HMAC validation; the outbox endpoint validates its dedicated shared secret. Customer-facing payment functions retain JWT verification and independently validate the signed-in user.
 
 ## PayChangu dashboard
 
@@ -72,7 +74,7 @@ The payment finalizer writes one idempotent outbox event per order:
 - `aggregate_id`: order UUID
 - payload: order ID/number, customer ID, currency, total, supplier fulfilment count, and `requires_human_supplier_purchase_approval: true`
 
-JARVIS should consume pending outbox events using a service-to-service credential, create a supplier purchase proposal per fulfilment snapshot, and wait for explicit administrator approval before placing supplier orders or initiating supplier payouts. It must acknowledge events idempotently. JARVIS being offline must never prevent checkout or corrupt payment state.
+JARVIS can poll the service-to-service endpoint `https://YOUR_PROJECT_REF.supabase.co/functions/v1/jarvis-outbox` with `POST` JSON `{ "action": "claim", "limit": 10 }` and header `x-jarvis-secret: YOUR_SHARED_SECRET`. The endpoint claims events using row locks and a 15-minute processing lease. Acknowledge each event with `POST` JSON `{ "action": "ack", "event_id": "EVENT_UUID", "success": true }`; on failure send `success: false` and a short `error`. After eight failed attempts an event is held for review. JARVIS should create a supplier purchase proposal per fulfilment snapshot and wait for explicit administrator approval before placing supplier orders or initiating supplier payouts. JARVIS must process event IDs idempotently. JARVIS being offline must never prevent checkout or corrupt payment state.
 
 ## Not yet completed / not claimed
 
