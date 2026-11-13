@@ -201,4 +201,92 @@ $$;
 revoke all on function public.finalize_paychangu_payment(text,text,numeric,text,text,jsonb,text) from public, anon, authenticated;
 grant execute on function public.finalize_paychangu_payment(text,text,numeric,text,text,jsonb,text) to service_role;
 
+
+alter table public.jarvis_event_outbox
+  add column if not exists locked_at timestamptz;
+
+-- Claim events safely from multiple JARVIS workers without double delivery.
+create or replace function public.claim_jarvis_events(p_limit integer default 10)
+returns setof public.jarvis_event_outbox
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+begin
+  if auth.role() <> 'service_role' then
+    raise exception 'Service role required' using errcode = '42501';
+  end if;
+  if p_limit is null or p_limit < 1 or p_limit > 50 then
+    raise exception 'Batch size must be between 1 and 50';
+  end if;
+
+  update public.jarvis_event_outbox
+  set status = 'pending', locked_at = null, next_attempt_at = now()
+  where status = 'processing' and locked_at < now() - interval '15 minutes';
+
+  return query
+  with candidates as (
+    select id
+    from public.jarvis_event_outbox
+    where status in ('pending','failed') and next_attempt_at <= now()
+    order by created_at
+    for update skip locked
+    limit p_limit
+  )
+  update public.jarvis_event_outbox e
+  set status = 'processing', attempts = attempts + 1, locked_at = now()
+  from candidates c
+  where e.id = c.id
+  returning e.*;
+end;
+$;
+
+create or replace function public.ack_jarvis_event(
+  p_event_id uuid,
+  p_success boolean,
+  p_error text default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+  v_event public.jarvis_event_outbox%rowtype;
+begin
+  if auth.role() <> 'service_role' then
+    raise exception 'Service role required' using errcode = '42501';
+  end if;
+  select * into v_event from public.jarvis_event_outbox
+  where id = p_event_id for update;
+  if not found then raise exception 'Outbox event not found'; end if;
+  if v_event.status = 'delivered' then
+    return jsonb_build_object('ok',true,'already_delivered',true);
+  end if;
+  if v_event.status <> 'processing' then
+    raise exception 'Outbox event is not currently claimed';
+  end if;
+
+  if p_success then
+    update public.jarvis_event_outbox
+    set status='delivered', delivered_at=now(), locked_at=null, last_error=null
+    where id=p_event_id;
+    return jsonb_build_object('ok',true,'status','delivered');
+  end if;
+
+  update public.jarvis_event_outbox
+  set status=case when attempts >= 8 then 'held_for_review' else 'failed' end,
+      locked_at=null,
+      next_attempt_at=now()+interval '5 minutes',
+      last_error=left(coalesce(p_error,'JARVIS worker reported an error'),1000)
+  where id=p_event_id;
+  return jsonb_build_object('ok',true,'status',case when v_event.attempts >= 8 then 'held_for_review' else 'failed' end);
+end;
+$;
+
+revoke all on function public.claim_jarvis_events(integer) from public, anon, authenticated;
+grant execute on function public.claim_jarvis_events(integer) to service_role;
+revoke all on function public.ack_jarvis_event(uuid,boolean,text) from public, anon, authenticated;
+grant execute on function public.ack_jarvis_event(uuid,boolean,text) to service_role;
+
 commit;
