@@ -51,6 +51,10 @@ The migration is committed but is **not yet applied to a live database**. Until 
 
     npm run build
 
+## Production catalogue safety
+
+Sample products are preview data only. They are enabled during local development, or when `VITE_ENABLE_DEMO_CATALOGUE=true` is explicitly set for a preview deployment. Do not enable this flag on a live customer storefront. In production, the catalogue must come from approved supplier products in Supabase; an empty catalogue is shown as empty rather than populated with sample inventory.
+
 ## Configuration
 
 - `VITE_WHATSAPP_NUMBER`: Kelnix order WhatsApp number in international digits-only format (265882986170).
@@ -72,3 +76,8 @@ The migration is committed but is **not yet applied to a live database**. Until 
 | Payment integration | Provider selection and credentials required |
 
 The next engineering dependency is a live Supabase database connection. Payment provider credentials and business verification will be needed before accepting online payments.
+
+## Engineering notes
+
+- Reuse and customization assessment: [docs/REUSE_CUSTOMIZATION_AUDIT.md](docs/REUSE_CUSTOMIZATION_AUDIT.md)
+- Development work is being isolated on a feature branch; production deployment and the `main` branch are not changed by this audit.
