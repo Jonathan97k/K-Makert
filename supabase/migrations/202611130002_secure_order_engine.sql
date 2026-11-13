@@ -10,7 +10,8 @@ begin;
 create or replace function public.guard_marketplace_privileged_fields()
 returns trigger language plpgsql security definer
 set search_path = public
-as $$1begin
+as $
+begin
   if tg_table_name = 'profiles' then
     if not public.is_marketplace_admin() and new.role is distinct from old.role then
       raise exception 'Only an administrator can change account roles';
@@ -38,7 +39,7 @@ as $$1begin
   end if;
   return new;
 end;
-$$;
+$;
 
 
 -- Keep the existing Malawi market available; no foreign market is enabled.
@@ -315,7 +316,7 @@ begin
 
   return query select v_order_id, v_order_number, v_market.currency_code, v_subtotal, v_shipping, v_total;
 end;
-$$;
+$;
 
 revoke all on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) from public, anon;
 grant execute on function public.place_marketplace_order(jsonb,text,text,text,text,uuid,text,jsonb,text) to authenticated;
