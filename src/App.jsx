@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from './lib/supabase'
-import { ArrowRight, ShieldCheck, Code2, Gamepad2, Database, LockKeyhole, Search, CheckCircle2, Menu, X, FileCode2, Handshake, BadgeCheck, Send, Github, Globe2, Layers3 } from 'lucide-react'
+import { ArrowRight, ShieldCheck, Code2, Gamepad2, Database, LockKeyhole, Search, CheckCircle2, Menu, X, FileCode2, Handshake, BadgeCheck, Send, Github, Globe2, Layers3, LogOut, RefreshCw, Mail, Building2, Clock, ShieldAlert } from 'lucide-react'
 
 const initialForm = { full_name:'', email:'', organisation:'', country:'Malawi', asset_type:'Private software repository', technologies:'', repository_url:'', repository_size:'', message:'', rights_confirmed:false, website:'' }
 
-export default function App() {
+function LandingPage() {
   const [leadType, setLeadType] = useState('buyer_interest')
   const [form, setForm] = useState(initialForm)
   const [busy, setBusy] = useState(false)
@@ -108,4 +108,81 @@ export default function App() {
     </main>
     <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
   </div>
+}
+\nfunction AdminPortal() {
+  const [email,setEmail]=useState('')
+  const [password,setPassword]=useState('')
+  const [user,setUser]=useState(null)
+  const [leads,setLeads]=useState([])
+  const [loading,setLoading]=useState(false)
+  const [busyId,setBusyId]=useState('')
+  const [notice,setNotice]=useState('')
+  const [filter,setFilter]=useState('all')
+  const [search,setSearch]=useState('')
+  const [selected,setSelected]=useState(null)
+
+  const loadLeads=useCallback(async()=>{
+    setLoading(true); setNotice('')
+    try {
+      const {data,error}=await supabase.from('marketplace_leads').select('*').order('created_at',{ascending:false})
+      if(error) throw error
+      setLeads(data||[])
+    } catch(err){setNotice(err.message||'Unable to load enquiries.')}
+    finally{setLoading(false)}
+  },[])
+
+  const verifyAdmin=useCallback(async()=>{
+    const {data:{user:current},error}=await supabase.auth.getUser()
+    if(error||!current){setUser(null);return}
+    const {data:profile,error:profileError}=await supabase.from('profiles').select('role').eq('id',current.id).maybeSingle()
+    if(profileError||profile?.role!=='admin'){
+      await supabase.auth.signOut()
+      setUser(null);setNotice('This account does not have the KELNIX administrator role.')
+      return
+    }
+    setUser(current)
+  },[])
+
+  useEffect(()=>{verifyAdmin()},[verifyAdmin])
+  useEffect(()=>{if(user)loadLeads()},[user,loadLeads])
+
+  const signIn=async e=>{
+    e.preventDefault();setLoading(true);setNotice('')
+    try{
+      const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password})
+      if(error)throw error
+      await verifyAdmin()
+    }catch(err){setNotice(err.message||'Sign-in failed.')}
+    finally{setLoading(false)}
+  }
+  const changeStatus=async(id,status)=>{
+    setBusyId(id);setNotice('')
+    try{
+      const {error}=await supabase.from('marketplace_leads').update({status}).eq('id',id)
+      if(error)throw error
+      setLeads(rows=>rows.map(row=>row.id===id?{...row,status}:row))
+      setSelected(row=>row?.id===id?{...row,status}:row)
+    }catch(err){setNotice(err.message||'Could not update enquiry status.')}
+    finally{setBusyId('')}
+  }
+  const signOut=async()=>{await supabase.auth.signOut();setUser(null);setLeads([]);setSelected(null)}
+  const visible=leads.filter(row=>(filter==='all'||row.lead_type===filter)&&(row.full_name+' '+row.email+' '+(row.organisation||'')+' '+(row.asset_type||'')).toLowerCase().includes(search.toLowerCase()))
+  const counts={all:leads.length,buyer_interest:leads.filter(x=>x.lead_type==='buyer_interest').length,seller_application:leads.filter(x=>x.lead_type==='seller_application').length}
+
+  if(!isSupabaseConfigured)return <div className="admin-shell"><div className="admin-card"><ShieldAlert/><h1>Admin portal unavailable</h1><p>Supabase is not configured for this deployment.</p><a href="/">Return to marketplace</a></div></div>
+  if(!user)return <div className="admin-shell"><div className="admin-login"><a className="brand" href="/"><span className="brand-symbol">K</span><span>KELNIX<small>ADMINISTRATION</small></span></a><div className="admin-eyebrow">RESTRICTED ACCESS</div><h1>Administrator sign in</h1><p>Use your authorised KELNIX administrator account. Access is checked against the administrator role stored in Supabase.</p><form onSubmit={signIn}><label>Email address<input type="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@company.com"/></label><label>Password<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Your password"/></label>{notice&&<div className="admin-alert">{notice}</div>}<button disabled={loading}>{loading?'Checking access…':'Sign in securely'}</button></form><a className="admin-back" href="/">← Back to public marketplace</a></div></div>
+
+  return <div className="admin-shell"><header className="admin-top"><a className="brand" href="/"><span className="brand-symbol">K</span><span>KELNIX<small>ADMIN CONSOLE</small></span></a><div className="admin-user"><span>{user.email}</span><button onClick={signOut}><LogOut size={15}/> Sign out</button></div></header><main className="admin-main"><div className="admin-title"><div><div className="admin-eyebrow">OPERATIONS / LEAD MANAGEMENT</div><h1>Enquiry dashboard</h1><p>Review buyer interest and seller applications. New submissions remain private to authorised administrators.</p></div><button className="admin-refresh" onClick={loadLeads} disabled={loading}><RefreshCw size={15}/> {loading?'Refreshing…':'Refresh'}</button></div>
+    <div className="admin-stats"><div><small>Total enquiries</small><b>{counts.all}</b></div><div><small>Buyer interest</small><b>{counts.buyer_interest}</b></div><div><small>Seller applications</small><b>{counts.seller_application}</b></div></div>
+    <div className="admin-controls"><div className="admin-filters">{[['all','All'],['buyer_interest','Buyers'],['seller_application','Sellers']].map(([key,label])=><button key={key} className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}</button>)}</div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email or organisation…"/></div>
+    {notice&&<div className="admin-alert">{notice}</div>}
+    <div className="admin-content"><section className="admin-list">{visible.length===0?<div className="admin-empty">{loading?'Loading enquiries…':'No enquiries match this view yet.'}</div>:visible.map(row=><button className={'lead-row '+(selected?.id===row.id?'chosen':'')} key={row.id} onClick={()=>setSelected(row)}><span className="lead-type">{row.lead_type==='seller_application'?'SELLER':'BUYER'}</span><b>{row.full_name}</b><small>{row.organisation||row.email}</small><span className={'lead-status status-'+row.status}>{row.status.replaceAll('_',' ')}</span><time>{new Date(row.created_at).toLocaleString()}</time></button>)}</section>
+    <section className="admin-detail">{selected?<><div className="detail-heading"><div><div className="admin-eyebrow">ENQUIRY DETAILS</div><h2>{selected.full_name}</h2></div><span className={'lead-status status-'+selected.status}>{selected.status.replaceAll('_',' ')}</span></div><div className="detail-grid"><div><small><Mail size={13}/> EMAIL</small><a href={'mailto:'+selected.email}>{selected.email}</a></div><div><small><Building2 size={13}/> ORGANISATION</small><b>{selected.organisation||'Not provided'}</b></div><div><small>COUNTRY</small><b>{selected.country}</b></div><div><small>ENQUIRY TYPE</small><b>{selected.lead_type==='seller_application'?'Seller application':'Buyer interest'}</b></div><div><small>ASSET CATEGORY</small><b>{selected.asset_type||'Not specified'}</b></div><div><small>TECHNOLOGIES / REQUIREMENTS</small><b>{selected.technologies||'Not provided'}</b></div>{selected.lead_type==='seller_application'&&<><div><small>PUBLIC PROFILE / REPOSITORY LINK</small>{selected.repository_url?<a href={selected.repository_url} target="_blank" rel="noreferrer">Open submitted link ↗</a>:<b>Not provided</b>}</div><div><small>PROJECT SCALE</small><b>{selected.repository_size||'Not provided'}</b></div><div><small>RIGHTS ATTESTATION</small><b>{selected.rights_confirmed?'Seller confirmed authority to discuss licensing':'Not confirmed'}</b></div></>}</div><div className="detail-message"><small>MESSAGE / PROJECT OVERVIEW</small><p>{selected.message}</p></div><div className="detail-actions"><label>Update review status<select value={selected.status} disabled={busyId===selected.id} onChange={e=>changeStatus(selected.id,e.target.value)}>{['new','reviewing','contacted','qualified','closed','rejected'].map(s=><option key={s} value={s}>{s.replaceAll('_',' ')}</option>)}</select></label><a href={'mailto:'+selected.email+'?subject='+encodeURIComponent('KELNIX enquiry follow-up')}>Reply by email ↗</a></div><small className="detail-time"><Clock size={12}/> Submitted {new Date(selected.created_at).toLocaleString()}</small></>:<div className="admin-empty">Select an enquiry to review its details.</div>}</section></div>
+    <div className="admin-footnote">This dashboard manages enquiries only. It does not verify ownership, approve assets, process payments or authorise repository delivery.</div>
+  </main></div>
+}
+
+export default function App(){
+  const admin=new URLSearchParams(window.location.search).get('admin')==='1'
+  return admin?<AdminPortal/>:<LandingPage/>
 }
