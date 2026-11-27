@@ -152,10 +152,14 @@ function LandingPage() {
     catch(err){setNotice(err.message||'Could not update seller status.')}finally{setOpsBusy('')}
   }
   const reviewAsset=async(asset,status)=>{
+    const evidence=window.prompt('Record the evidence checked (for example repository ownership, commit history, licence and third-party asset rights). Approval requires a non-empty record.')
+    if(status==='approved'&&!evidence?.trim())return
+    const notes=window.prompt('Add review notes for the audit trail:')||''
+    if(!window.confirm(status==='approved'?'Confirm approval after completing the documented checks?':'Confirm rejection of this listing?'))return
     setOpsBusy(asset.id);setNotice('')
     try{
       const decision=status==='approved'?'approved':'rejected'
-      const {error:reviewError}=await supabase.from('digital_asset_reviews').insert({asset_id:asset.id,reviewer_id:user.id,decision,review_notes:'Reviewed through the KELNIX administrator dashboard.'})
+      const {error:reviewError}=await supabase.from('digital_asset_reviews').insert({asset_id:asset.id,reviewer_id:user.id,decision,review_notes:notes||null,evidence_checked:evidence?.trim()||null})
       if(reviewError)throw reviewError
       const {error}=await supabase.from('digital_asset_listings').update({status}).eq('id',asset.id)
       if(error)throw error
