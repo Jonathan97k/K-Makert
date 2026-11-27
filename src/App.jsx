@@ -120,6 +120,9 @@ function LandingPage() {
   const [filter,setFilter]=useState('all')
   const [search,setSearch]=useState('')
   const [selected,setSelected]=useState(null)
+  const [sellerApplications,setSellerApplications]=useState([])
+  const [pendingAssets,setPendingAssets]=useState([])
+  const [opsBusy,setOpsBusy]=useState('')
 
   const loadLeads=useCallback(async()=>{
     setLoading(true); setNotice('')
@@ -131,6 +134,34 @@ function LandingPage() {
     finally{setLoading(false)}
   },[])
 
+  const loadOps=useCallback(async()=>{
+    const [members,assets]=await Promise.all([
+      supabase.from('marketplace_memberships').select('user_id,seller_status,created_at').in('seller_status',['pending','approved','rejected','suspended']).order('created_at',{ascending:false}),
+      supabase.from('digital_asset_listings').select('id,seller_id,title,summary,asset_type,technologies,commit_count,merged_pr_count,first_party_loc,development_months,licence_type,asking_price,currency_code,status,rights_attested,created_at').in('status',['submitted','under_review']).order('created_at',{ascending:false})
+    ])
+    if(members.error||assets.error){setNotice([members.error,assets.error].filter(Boolean).map(x=>x.message).join(' · '));return}
+    const ids=(members.data||[]).map(x=>x.user_id)
+    let profiles=[]
+    if(ids.length){const {data}=await supabase.from('profiles').select('id,full_name').in('id',ids);profiles=data||[]}
+    setSellerApplications((members.data||[]).map(x=>({...x,full_name:profiles.find(p=>p.id===x.user_id)?.full_name||'Name unavailable'})))
+    setPendingAssets(assets.data||[])
+  },[])
+  const setSellerDecision=async(userId,status)=>{
+    setOpsBusy(userId);setNotice('')
+    try{const {error}=await supabase.rpc('admin_set_marketplace_seller_status',{target_user_id:userId,new_status:status});if(error)throw error;setSellerApplications(rows=>rows.map(x=>x.user_id===userId?{...x,seller_status:status}:x))}
+    catch(err){setNotice(err.message||'Could not update seller status.')}finally{setOpsBusy('')}
+  }
+  const reviewAsset=async(asset,status)=>{
+    setOpsBusy(asset.id);setNotice('')
+    try{
+      const decision=status==='approved'?'approved':'rejected'
+      const {error:reviewError}=await supabase.from('digital_asset_reviews').insert({asset_id:asset.id,reviewer_id:user.id,decision,review_notes:'Reviewed through the KELNIX administrator dashboard.'})
+      if(reviewError)throw reviewError
+      const {error}=await supabase.from('digital_asset_listings').update({status}).eq('id',asset.id)
+      if(error)throw error
+      setPendingAssets(rows=>rows.filter(x=>x.id!==asset.id))
+    }catch(err){setNotice(err.message||'Could not complete asset review.')}finally{setOpsBusy('')}
+  }
   const verifyAdmin=useCallback(async()=>{
     if(!isSupabaseConfigured)return
     const {data:{user:current},error}=await supabase.auth.getUser()
@@ -145,7 +176,7 @@ function LandingPage() {
   },[])
 
   useEffect(()=>{if(isSupabaseConfigured)verifyAdmin()},[verifyAdmin])
-  useEffect(()=>{if(user)loadLeads()},[user,loadLeads])
+  useEffect(()=>{if(user){loadLeads();loadOps()}},[user,loadLeads,loadOps])
 
   const signIn=async e=>{
     e.preventDefault();setLoading(true);setNotice('')
@@ -166,7 +197,7 @@ function LandingPage() {
     }catch(err){setNotice(err.message||'Could not update enquiry status.')}
     finally{setBusyId('')}
   }
-  const signOut=async()=>{await supabase.auth.signOut();setUser(null);setLeads([]);setSelected(null)}
+  const signOut=async()=>{await supabase.auth.signOut();setUser(null);setLeads([]);setSelected(null);setSellerApplications([]);setPendingAssets([])}
   const visible=leads.filter(row=>(filter==='all'||row.lead_type===filter)&&(row.full_name+' '+row.email+' '+(row.organisation||'')+' '+(row.asset_type||'')).toLowerCase().includes(search.toLowerCase()))
   const counts={all:leads.length,buyer_interest:leads.filter(x=>x.lead_type==='buyer_interest').length,seller_application:leads.filter(x=>x.lead_type==='seller_application').length}
 
@@ -175,6 +206,12 @@ function LandingPage() {
 
   return <div className="admin-shell"><header className="admin-top"><a className="brand" href="/"><span className="brand-symbol">K</span><span>KELNIX<small>ADMIN CONSOLE</small></span></a><div className="admin-user"><span>{user.email}</span><button onClick={signOut}><LogOut size={15}/> Sign out</button></div></header><main className="admin-main"><div className="admin-title"><div><div className="admin-eyebrow">OPERATIONS / LEAD MANAGEMENT</div><h1>Enquiry dashboard</h1><p>Review buyer interest and seller applications. New submissions remain private to authorised administrators.</p></div><button className="admin-refresh" onClick={loadLeads} disabled={loading}><RefreshCw size={15}/> {loading?'Refreshing…':'Refresh'}</button></div>
     <div className="admin-stats"><div><small>Total enquiries</small><b>{counts.all}</b></div><div><small>Buyer interest</small><b>{counts.buyer_interest}</b></div><div><small>Seller applications</small><b>{counts.seller_application}</b></div></div>
+    <div className="admin-ops-grid">
+      <section className="admin-ops-card"><div className="admin-eyebrow">SELLER ACCESS</div><h2>Seller applications</h2><p>Approve access only after identity, ownership and rights checks are completed outside this dashboard.</p>
+      {sellerApplications.filter(x=>x.seller_status==='pending').length===0?<div className="admin-empty">No pending seller applications.</div>:sellerApplications.filter(x=>x.seller_status==='pending').map(x=><div className="ops-record" key={x.user_id}><div><b>{x.full_name}</b><small>{x.user_id}</small><span>Applied {new Date(x.created_at).toLocaleDateString()}</span></div><div className="ops-actions"><button disabled={opsBusy===x.user_id} onClick={()=>setSellerDecision(x.user_id,'approved')}>Approve</button><button className="danger" disabled={opsBusy===x.user_id} onClick={()=>setSellerDecision(x.user_id,'rejected')}>Reject</button></div></div>)}</section>
+      <section className="admin-ops-card"><div className="admin-eyebrow">ASSET VERIFICATION</div><h2>Listings awaiting review</h2><p>Review provenance, commit history, ownership, licences and included third-party materials before approval.</p>
+      {pendingAssets.length===0?<div className="admin-empty">No submitted assets awaiting review.</div>:pendingAssets.map(x=><div className="ops-record" key={x.id}><div><b>{x.title}</b><small>{x.asset_type.replaceAll('_',' ')} · Seller {x.seller_id.slice(0,8)}…</small><span>{x.commit_count??'—'} commits · {x.merged_pr_count??'—'} merged PRs · {x.first_party_loc??'—'} first-party LOC</span><span>{x.development_months??'—'} months · Rights attested: {x.rights_attested?'Yes':'No'}</span></div><div className="ops-actions"><button disabled={opsBusy===x.id||!x.rights_attested} onClick={()=>reviewAsset(x,'approved')}>Approve</button><button className="danger" disabled={opsBusy===x.id} onClick={()=>reviewAsset(x,'rejected')}>Reject</button></div></div>)}</section>
+    </div>
     <div className="admin-controls"><div className="admin-filters">{[['all','All'],['buyer_interest','Buyers'],['seller_application','Sellers']].map(([key,label])=><button key={key} className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}</button>)}</div><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search name, email or organisation…"/></div>
     {notice&&<div className="admin-alert">{notice}</div>}
     <div className="admin-content"><section className="admin-list">{visible.length===0?<div className="admin-empty">{loading?'Loading enquiries…':'No enquiries match this view yet.'}</div>:visible.map(row=><button className={'lead-row '+(selected?.id===row.id?'chosen':'')} key={row.id} onClick={()=>setSelected(row)}><span className="lead-type">{row.lead_type==='seller_application'?'SELLER':'BUYER'}</span><b>{row.full_name}</b><small>{row.organisation||row.email}</small><span className={'lead-status status-'+row.status}>{row.status.replaceAll('_',' ')}</span><time>{new Date(row.created_at).toLocaleString()}</time></button>)}</section>
