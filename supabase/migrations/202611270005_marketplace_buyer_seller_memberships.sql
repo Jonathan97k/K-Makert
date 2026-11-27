@@ -12,14 +12,17 @@ alter table public.marketplace_memberships enable row level security;
 revoke all on public.marketplace_memberships from anon, authenticated;
 grant select, insert, update on public.marketplace_memberships to authenticated;
 
+drop policy if exists "Users can view own marketplace membership" on public.marketplace_memberships;
 create policy "Users can view own marketplace membership"
 on public.marketplace_memberships for select to authenticated
 using (user_id = (select auth.uid()) or public.is_marketplace_admin());
 
+drop policy if exists "Users can create own initial marketplace membership" on public.marketplace_memberships;
 create policy "Users can create own initial marketplace membership"
 on public.marketplace_memberships for insert to authenticated
 with check (user_id = (select auth.uid()) and buyer_enabled = true and seller_status in ('not_requested','pending'));
 
+drop policy if exists "Admins manage marketplace memberships" on public.marketplace_memberships;
 create policy "Admins manage marketplace memberships"
 on public.marketplace_memberships for all to authenticated
 using (public.is_marketplace_admin())
@@ -44,6 +47,7 @@ for each row execute function public.handle_new_marketplace_membership();
 
 revoke update on public.marketplace_memberships from authenticated;
 grant update (buyer_enabled,updated_at) on public.marketplace_memberships to authenticated;
+drop policy if exists "Users can update own buyer preference" on public.marketplace_memberships;
 create policy "Users can update own buyer preference"
 on public.marketplace_memberships for update to authenticated
 using (user_id = (select auth.uid()))
@@ -67,6 +71,8 @@ revoke update on public.profiles from authenticated;
 grant update (full_name,phone,updated_at) on public.profiles to authenticated;
 
 drop policy if exists "Authenticated users can submit own digital assets" on public.digital_asset_listings;
+drop policy if exists "Authenticated users can submit own digital assets" on public.digital_asset_listings;
+drop policy if exists "Marketplace sellers can create own digital assets" on public.digital_asset_listings;
 create policy "Marketplace sellers can create own digital assets"
 on public.digital_asset_listings for insert to authenticated
 with check (
@@ -76,6 +82,8 @@ with check (
  )
 );
 drop policy if exists "Sellers can edit own unapproved digital assets" on public.digital_asset_listings;
+drop policy if exists "Sellers can edit own unapproved digital assets" on public.digital_asset_listings;
+drop policy if exists "Marketplace sellers can edit own eligible digital assets" on public.digital_asset_listings;
 create policy "Marketplace sellers can edit own eligible digital assets"
 on public.digital_asset_listings for update to authenticated
 using (seller_id=(select auth.uid()) and status in ('draft','submitted') and exists(select 1 from public.marketplace_memberships m where m.user_id=(select auth.uid()) and m.seller_status in ('pending','approved')))
