@@ -109,7 +109,8 @@ function LandingPage() {
     <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a><a href="/?account=1">Account</a><a href="/?admin=1">Admin</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
   </div>
 }
-\nfunction AdminPortal() {
+
+function AdminPortal() {
   const [email,setEmail]=useState('')
   const [password,setPassword]=useState('')
   const [user,setUser]=useState(null)
