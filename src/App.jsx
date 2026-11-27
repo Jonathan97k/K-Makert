@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase, isSupabaseConfigured } from './lib/supabase'
-import { ArrowRight, ShieldCheck, Code2, Gamepad2, Database, LockKeyhole, Search, CheckCircle2, Menu, X, FileCode2, Handshake, BadgeCheck, Send, Github, Globe2, Layers3, LogOut, RefreshCw, Mail, Building2, Clock, ShieldAlert } from 'lucide-react'
+import { ArrowRight, ShieldCheck, Code2, Gamepad2, Database, LockKeyhole, Search, CheckCircle2, Menu, X, FileCode2, Handshake, BadgeCheck, Send, Github, Globe2, Layers3, LogOut, RefreshCw, Mail, Building2, Clock, ShieldAlert, ShoppingBag, Store, Users } from 'lucide-react'
 
 const initialForm = { full_name:'', email:'', organisation:'', country:'Malawi', asset_type:'Private software repository', technologies:'', repository_url:'', repository_size:'', message:'', rights_confirmed:false, website:'' }
 
@@ -42,7 +42,7 @@ function LandingPage() {
       <a className="brand" href="#top" aria-label="KELNIX home"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></a>
       <button className="mobile-menu" onClick={()=>setMobileOpen(v=>!v)} aria-label="Toggle navigation">{mobileOpen?<X/>:<Menu/>}</button>
       <nav className={mobileOpen?'nav nav-open':'nav'}><a href="#marketplace" onClick={()=>setMobileOpen(false)}>Marketplace</a><a href="#standards" onClick={()=>setMobileOpen(false)}>Trust & verification</a><a href="#process" onClick={()=>setMobileOpen(false)}>How it works</a></nav>
-      <a className="header-cta" href="#contact">Talk to KELNIX <ArrowRight size={15}/></a>
+      <a className="account-header-link" href="/?account=1">Sign in / Register</a><a className="header-cta" href="#contact">Talk to KELNIX <ArrowRight size={15}/></a>
     </header>
 
     <main id="top">
@@ -106,7 +106,7 @@ function LandingPage() {
         </div>
       </section>
     </main>
-    <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a><a href="/?admin=1">Admin</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
+    <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a><a href="/?account=1">Account</a><a href="/?admin=1">Admin</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
   </div>
 }
 \nfunction AdminPortal() {
@@ -183,7 +183,37 @@ function LandingPage() {
   </main></div>
 }
 
+
+function AccountPortal() {
+  const [mode,setMode]=useState('signup'),[intent,setIntent]=useState('buyer'),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[success,setSuccess]=useState(''),[membership,setMembership]=useState(null),[sessionUser,setSessionUser]=useState(null)
+  const submit=async e=>{
+    e.preventDefault();setBusy(true);setNotice('');setSuccess('')
+    try{
+      if(mode==='signup'){
+        if(password.length<10)throw new Error('Use a password with at least 10 characters.')
+        const {data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{full_name:name.trim(),marketplace_intent:intent},emailRedirectTo:window.location.origin+'/?account=1'}})
+        if(error)throw error
+        if(data.session){setSessionUser(data.user);const {data:member,error:memberError}=await supabase.from('marketplace_memberships').select('buyer_enabled,seller_status').eq('user_id',data.user.id).maybeSingle();if(memberError)throw memberError;setMembership(member)}
+        setSuccess('Your registration has been submitted. Check your email for the confirmation link if email confirmation is enabled. Any seller application remains pending until KELNIX approves it.')
+      }else{
+        const {data,error}=await supabase.auth.signInWithPassword({email:email.trim(),password})
+        if(error)throw error
+        setSessionUser(data.user);const {data:member,error:memberError}=await supabase.from('marketplace_memberships').select('buyer_enabled,seller_status').eq('user_id',data.user.id).maybeSingle();if(memberError)throw memberError;setMembership(member);setSuccess('You are signed in. Your marketplace account status is shown below.')
+      }
+    }catch(err){setNotice(err.message||'We could not complete this request.')}finally{setBusy(false)}
+  }
+  const signOut=async()=>{await supabase.auth.signOut();setSessionUser(null);setMembership(null);setSuccess('You have signed out.')}
+  return <div className="account-shell"><header className="account-header"><a className="brand" href="/"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></a><a href="/">Back to marketplace</a></header>
+  <main className="account-main"><section className="account-intro"><div className="eyebrow">YOUR KELNIX ACCOUNT</div><h1>One account.<br/><em>Two ways to participate.</em></h1><p>Register as a buyer, request seller access, or choose both. You can add a seller application later from your account.</p><div className="account-security"><ShieldCheck/><span><b>Seller access is approval-based</b><small>Choosing seller does not grant permission to publish listings or receive buyer data.</small></span></div></section>
+  <section className="account-panel">{sessionUser?<><div className="account-panel-top"><div className="admin-eyebrow">ACCOUNT STATUS</div><button className="account-switch" onClick={signOut}>Sign out</button></div><h2>Welcome to KELNIX</h2><p className="account-email">{sessionUser.email}</p><div className="account-status-row"><span>Buyer access</span><b>{membership?.buyer_enabled?'Enabled':'Not enabled'}</b></div><div className="account-status-row"><span>Seller application</span><b className={'seller-state '+(membership?.seller_status||'')}>{(membership?.seller_status||'not recorded').replaceAll('_',' ')}</b></div><div className="account-notice"><ShieldCheck size={18}/><span>Account registration and role storage are active. Separate buyer and seller workspaces are the next implementation stage; transactions and asset publishing are not enabled yet.</span></div></>:<>
+  <div className="account-tabs"><button className={mode==='signup'?'active':''} onClick={()=>{setMode('signup');setNotice('');setSuccess('')}}>Create account</button><button className={mode==='signin'?'active':''} onClick={()=>{setMode('signin');setNotice('');setSuccess('')}}>Sign in</button></div><h2>{mode==='signup'?'Join the exchange':'Welcome back'}</h2><p>{mode==='signup'?'Choose how you want to use KELNIX.':'Sign in to access your marketplace account.'}</p>
+  <form onSubmit={submit}>{mode==='signup'&&<><label>Full name<input required minLength="2" maxLength="120" value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name"/></label><div className="account-role-label">How would you like to use KELNIX?</div><div className="account-role-options"><button type="button" className={intent==='buyer'?'chosen':''} onClick={()=>setIntent('buyer')}><ShoppingBag/><b>Buyer</b><small>Discover and acquire assets</small></button><button type="button" className={intent==='seller'?'chosen':''} onClick={()=>setIntent('seller')}><Store/><b>Seller</b><small>Apply to list your assets</small></button><button type="button" className={intent==='both'?'chosen':''} onClick={()=>setIntent('both')}><Users/><b>Both</b><small>Buy and apply to sell</small></button></div><div className="account-hint">Buyer access is enabled at registration. Seller applications start as pending and require KELNIX approval.</div></>}
+  <label>Email address<input type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label><label>Password<input type="password" required minLength="10" autoComplete={mode==='signup'?'new-password':'current-password'} value={password} onChange={e=>setPassword(e.target.value)} placeholder={mode==='signup'?'At least 10 characters':'Your password'}/></label>{notice&&<div className="admin-alert">{notice}</div>}{success&&<div className="account-notice"><CheckCircle2 size={18}/><span>{success}</span></div>}<button className="account-submit" disabled={busy}>{busy?'Please wait…':mode==='signup'?'Create secure account':'Sign in securely'} <ArrowRight size={16}/></button></form></>}</section></main><footer className="account-footer">KELNIX · Private software assets. Responsible licensing.</footer></div>
+}
+
 export default function App(){
-  const admin=new URLSearchParams(window.location.search).get('admin')==='1'
-  return admin?<AdminPortal/>:<LandingPage/>
+  const params=new URLSearchParams(window.location.search)
+  const admin=params.get('admin')==='1'
+  const account=params.get('account')==='1'
+  return admin?<AdminPortal/>:account?<AccountPortal/>:<LandingPage/>
 }
