@@ -106,7 +106,7 @@ function LandingPage() {
         </div>
       </section>
     </main>
-    <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
+    <footer className="footer"><div className="brand footer-brand"><span className="brand-symbol">K</span><span>KELNIX<small>CODE & DATA EXCHANGE</small></span></div><p>Connecting valuable software assets with responsible licensing opportunities.</p><div className="footer-links"><a href="#standards">Trust standards</a><a href="#process">How it works</a><a href="mailto:info.kelnix@gmail.com">Contact</a><a href="/?admin=1">Admin</a></div><small>© {new Date().getFullYear()} KELNIX. All rights reserved. <span>Preview phase — transactions are not yet enabled.</span></small></footer>
   </div>
 }
 \nfunction AdminPortal() {
@@ -132,6 +132,7 @@ function LandingPage() {
   },[])
 
   const verifyAdmin=useCallback(async()=>{
+    if(!isSupabaseConfigured)return
     const {data:{user:current},error}=await supabase.auth.getUser()
     if(error||!current){setUser(null);return}
     const {data:profile,error:profileError}=await supabase.from('profiles').select('role').eq('id',current.id).maybeSingle()
@@ -143,7 +144,7 @@ function LandingPage() {
     setUser(current)
   },[])
 
-  useEffect(()=>{verifyAdmin()},[verifyAdmin])
+  useEffect(()=>{if(isSupabaseConfigured)verifyAdmin()},[verifyAdmin])
   useEffect(()=>{if(user)loadLeads()},[user,loadLeads])
 
   const signIn=async e=>{
