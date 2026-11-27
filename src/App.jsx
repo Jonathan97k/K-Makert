@@ -231,6 +231,22 @@ function AccountPortal() {
   const [tab,setTab]=useState('overview'),[assets,setAssets]=useState([]),[publicAssets,setPublicAssets]=useState([]),[orders,setOrders]=useState([]),[entitlements,setEntitlements]=useState([]),[payouts,setPayouts]=useState([]),[loadingData,setLoadingData]=useState(false)
   const [draft,setDraft]=useState({title:'',summary:'',asset_type:'private_repository',technologies:'',licence_type:'non_exclusive',asking_price:'',currency_code:'USD'})
   const [savingDraft,setSavingDraft]=useState(false)
+  useEffect(()=>{
+    let active=true
+    supabase.auth.getSession().then(async({data,error})=>{
+      if(!active)return
+      if(error){setNotice(error.message);return}
+      const restoredUser=data.session?.user
+      if(!restoredUser)return
+      setSessionUser(restoredUser)
+      const {data:member,error:memberError}=await supabase.from('marketplace_memberships').select('buyer_enabled,seller_status').eq('user_id',restoredUser.id).maybeSingle()
+      if(!active)return
+      if(memberError){setNotice(memberError.message);return}
+      setMembership(member)
+      await loadDashboard(restoredUser)
+    })
+    return()=>{active=false}
+  },[])
   const loadDashboard=async user=>{
     if(!user)return
     setLoadingData(true);setNotice('')
