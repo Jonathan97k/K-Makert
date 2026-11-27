@@ -93,3 +93,23 @@ with check (
   or (status='submitted' and rights_attested=true and exists(select 1 from public.marketplace_memberships m where m.user_id=(select auth.uid()) and m.seller_status='approved'))
  )
 );
+
+-- Let a signed-in buyer request seller access without editing the protected status field.
+create or replace function public.request_marketplace_seller_access()
+returns text language plpgsql security definer set search_path = ''
+as $$
+declare current_status text;
+begin
+  if auth.uid() is null then raise exception 'Sign in is required'; end if;
+  update public.marketplace_memberships set seller_status='pending',updated_at=now()
+  where user_id=auth.uid() and seller_status in ('not_requested','rejected')
+  returning seller_status into current_status;
+  if current_status is null then
+    select seller_status into current_status from public.marketplace_memberships where user_id=auth.uid();
+  end if;
+  if current_status is null then raise exception 'Marketplace membership not found'; end if;
+  return current_status;
+end;
+$$;
+revoke all on function public.request_marketplace_seller_access() from public,anon;
+grant execute on function public.request_marketplace_seller_access() to authenticated;
