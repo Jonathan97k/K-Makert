@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/kelnix-code-marketplace
+      - fix/kelnix-security-performance
   pull_request:
     branches:
       - main
